@@ -43,6 +43,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="TestData\AbstractClass.cs" />
+    <Compile Include="TestData\GenericInterfaceCalling.cs" />
     <Compile Include="TestData\InterfaceCalling.cs" />
     <Compile Include="TestData\IntWrapper.cs" />
     <Compile Include="TestData\IRecursive.cs" />

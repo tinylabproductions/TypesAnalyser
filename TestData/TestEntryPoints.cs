@@ -1,4 +1,5 @@
-﻿using TestData;
+﻿using System;
+using TestData;
 
 // ReSharper disable UnusedVariable
 
@@ -39,6 +40,11 @@ static class TestEntryPoints {
   public static void testStaticMethodInGenericClass() {
     var intId = Tuple1<int>.identity(3);
     var strId = Tuple1<string>.identity("3");
+  }
+
+  public static void testDelegates() {
+    Func<int, float, float> f = (a, b) => a + b;
+    var result = f(1, 2.4f);
   }
 
   public static void testGenericStructCtor() {
@@ -98,6 +104,11 @@ static class TestEntryPoints {
     iface.identity(3);
   }
 
+  public static void testNonGenericInterfaceUnbeknownstImplementation() {
+    INonGeneric iface = new INonGenericExtender();
+    iface.identity(3);
+  }
+
   public static void testNonGenericAbstractClassCalling() {
     ACNonGeneric iface = new ACNormalIdentity();
     iface.identity(3);
@@ -117,6 +128,26 @@ static class TestEntryPoints {
 
   public static void testNonGenericAbstractClassCircularCallingInterface() {
     ACNonGeneric iface = new ACCircularIfaceIdentity();
+    iface.identity(3);
+  }
+
+  public static void testGenericInterfaceSimple() {
+    IGenericInterfaceCalling<int> iface = new GenericSimpleIdentity<int>();
+    iface.identity(3);
+  }
+
+  public static void testGenericInterfaceExtraArg() {
+    IGenericInterfaceCalling<int> iface = new GenericExtraArgIdentity<int, float>();
+    iface.identity(3);
+  }
+
+  public static void testGenericInterfaceCircular() {
+    IGenericInterfaceCalling<int> iface = new GenericCircularIdentity<int>();
+    iface.identity(3);
+  }
+
+  public static void testGenericInterfaceUnbeknownstImplementation() {
+    IGenericInterfaceCalling<int> iface = new IGenericExtender<int>();
     iface.identity(3);
   }
 }

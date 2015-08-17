@@ -11,12 +11,12 @@ namespace TypesAnalyser {
   public struct AnalyzerData {
     public readonly ImmutableHashSet<ExpandedType> usedTypes;
     public readonly ImmutableHashSet<ExpandedMethod> analyzedMethods;
-    public readonly ImmutableHashSet<MethodDefinition> virtualMethodsToAnalyze, analyzedVirtualMethods;
+    public readonly ImmutableHashSet<VirtualMethod> virtualMethodsToAnalyze, analyzedVirtualMethods;
 
     public AnalyzerData(
       ImmutableHashSet<ExpandedType> usedTypes, ImmutableHashSet<ExpandedMethod> analyzedMethods, 
-      ImmutableHashSet<MethodDefinition> virtualMethodsToAnalyze, 
-      ImmutableHashSet<MethodDefinition> analyzedVirtualMethods
+      ImmutableHashSet<VirtualMethod> virtualMethodsToAnalyze, 
+      ImmutableHashSet<VirtualMethod> analyzedVirtualMethods
     ) {
       this.usedTypes = usedTypes;
       this.analyzedMethods = analyzedMethods;
@@ -37,12 +37,12 @@ namespace TypesAnalyser {
         ? this : new AnalyzerData(usedTypes, analyzedMethods.Add(method), virtualMethodsToAnalyze, analyzedVirtualMethods);
     }
 
-    public AnalyzerData addVirtualMethod(MethodDefinition method) {
+    public AnalyzerData addVirtualMethod(VirtualMethod method) {
       return virtualMethodsToAnalyze.Contains(method) || analyzedVirtualMethods.Contains(method)
         ? this : new AnalyzerData(usedTypes, analyzedMethods, virtualMethodsToAnalyze.Add(method), analyzedVirtualMethods);
     }
 
-    public AnalyzerData analyzedVirtualMethod(MethodDefinition virtualMethod) {
+    public AnalyzerData analyzedVirtualMethod(VirtualMethod virtualMethod) {
       return new AnalyzerData(
         usedTypes, analyzedMethods, 
         virtualMethodsToAnalyze.Remove(virtualMethod), analyzedVirtualMethods.Add(virtualMethod)
@@ -114,7 +114,7 @@ namespace TypesAnalyser {
     ) {
       var data = new AnalyzerData(
         ImmutableHashSet<ExpandedType>.Empty, ImmutableHashSet<ExpandedMethod>.Empty,
-        ImmutableHashSet<MethodDefinition>.Empty, ImmutableHashSet<MethodDefinition>.Empty
+        ImmutableHashSet<VirtualMethod>.Empty, ImmutableHashSet<VirtualMethod>.Empty
       );
       foreach (var entryMethod in entryPoints) {
         var exEntryMethod = ExpandedMethod.create(
@@ -132,15 +132,30 @@ namespace TypesAnalyser {
       // virtual methods.
       while (!data.virtualMethodsToAnalyze.IsEmpty) {
         foreach (var virtualMethod in data.virtualMethodsToAnalyze) {
-          var declaring = virtualMethod.DeclaringType;
-          foreach (var usedType in data.usedTypes.Where(et => et.implements(declaring))) {
-            var matching = MetadataResolver.GetMethod(usedType.definition.Methods, virtualMethod);
+          var declaring = virtualMethod.declaringType;
+          foreach (var _usedType in data.usedTypes.Where(et => et.implements(declaring.definition))) {
+            var usedType = _usedType;
+            MethodDefinition matching = null;
+            while (matching == null) {
+              matching = MetadataResolver.GetMethod(usedType.definition.Methods, virtualMethod.definition);
+              if (matching == null) {
+                if (usedType.definition.BaseType == null) throw new Exception(
+                  "Can't find implementation for " + virtualMethod + " in " + usedType + "!"
+                );
+                usedType = ExpandedType.create(
+                  usedType.definition.BaseType,
+                  usedType.genericParametersToArguments
+                );
+              }
+            }
+            
             var exMatching = ExpandedMethod.create(
               usedType, matching,
               ImmutableDictionary<GenericParameter, ExpandedType>.Empty
             );
-            data = analyze(data, exMatching, log).analyzedVirtualMethod(virtualMethod);
+            data = analyze(data, exMatching, log);
           }
+          data = data.analyzedVirtualMethod(virtualMethod);
         }
       }
       return data;
@@ -177,7 +192,7 @@ namespace TypesAnalyser {
         // of virtual methods will be instantiated, we will need to do a separate 
         // analyzing stage once we know all the concrete types.
         data = data.addType(method.declaringType);
-        data = data.addVirtualMethod(method.definition);
+        data = data.addVirtualMethod(new VirtualMethod(method));
       }
       else if (method.definition.Body != null) {
         var body = method.definition.Body;

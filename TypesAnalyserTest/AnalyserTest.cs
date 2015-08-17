@@ -78,9 +78,10 @@ namespace TypesAnalyserTest {
 
     const string
       TEP = "TestEntryPoints",
-      TD = "TestData",
       VOID = "System.Void",
       INT = "System.Int32",
+      BOOL = "System.Boolean",
+      FLT = "System.Single",
       STR = "System.String",
       OBJ = "System.Object",
       OBJ_CTOR = "System.Void System.Object::.ctor()",
@@ -95,6 +96,8 @@ namespace TypesAnalyserTest {
       TUPLE2 = "TestData.Tuple2`2",
       INONGENERIC = "TestData.INonGeneric",
       INONGENERIC2 = "TestData.INonGeneric2",
+      IUNKNOWNIMPL = "TestData.INonGenericUnknownImplementer",
+      IUNKNOWNIMPL_EX = "TestData.INonGenericExtender",
       CIRCULAR_IDENTITY = "TestData.CircularIdentity",
       CIRCULAR_IDENTITY2 = "TestData.CircularIdentity2",
       CIRCULAR_AC_IDENTITY = "TestData.CircularAbstractClassIdentity",
@@ -108,7 +111,15 @@ namespace TypesAnalyserTest {
       AC_CIRCULAR_IF_IDENTITY = "TestData.ACCircularIfaceIdentity",
       AC_NORMAL_IDENTITY = "TestData.ACNormalIdentity",
       AC_LYING_IDENTITY = "TestData.ACLyingIdentity",
-      AC_RANDOM_IDENTITY = "TestData.ACRandomIdentity"
+      AC_RANDOM_IDENTITY = "TestData.ACRandomIdentity",
+      IGENERIC = "TestData.IGenericInterfaceCalling`1",
+      IGENERIC2 = "TestData.IGenericInterfaceCalling2`1",
+      GENERIC_IDENTITY = "TestData.GenericSimpleIdentity`1",
+      GENERIC_CIRCULAR = "TestData.GenericCircularIdentity`1",
+      GENERIC_CIRCULAR2 = "TestData.GenericCircularIdentity2`1",
+      GENERIC_EXTRA_ARG_IDENTITY = "TestData.GenericExtraArgIdentity`2",
+      IGEN_UNKNOWNIMPL = "TestData.IGenericUnknownImplementer`1",
+      IGEN_UNKNOWNIMPL_EX = "TestData.IGenericExtender`1"
     ;
 
     #endregion
@@ -198,6 +209,17 @@ namespace TypesAnalyserTest {
 
     #region Generic
     
+    [Test]
+    public void testDelegates() {
+      assertAnalyze("testDelegates", 
+        new [] {INT, FLT},
+        new [] {
+          $"{INT} {TUPLE1_S}::identity<{INT}>({INT})",
+          $"{STR} {TUPLE1_S}::identity<{STR}>({STR})"
+        }
+      );
+    }
+
     [Test]
     public void testGenericStaticMethodInSimpleClass() {
       assertAnalyze("testGenericStaticMethodInSimpleClass", 
@@ -431,6 +453,22 @@ namespace TypesAnalyserTest {
       );
     }
 
+    [Test]
+    public void testNonGenericInterfaceUnbeknownstImplementation() {
+      assertAnalyze("testNonGenericInterfaceUnbeknownstImplementation", 
+        new [] {
+          INT, OBJ, INONGENERIC, IUNKNOWNIMPL, IUNKNOWNIMPL_EX
+        },
+        new [] {
+          OBJ_CTOR,
+          $"{INT} {INONGENERIC}::identity({INT})",
+          $"{INT} {IUNKNOWNIMPL}::identity({INT})",
+          $"{VOID} {IUNKNOWNIMPL}::.ctor()",
+          $"{VOID} {IUNKNOWNIMPL_EX}::.ctor()",
+        }
+      );
+    }
+
     #endregion
 
     #region Non-Generic abstract classes
@@ -515,6 +553,83 @@ namespace TypesAnalyserTest {
         }
       );
     }
+
+    #region Generic interfaces
+
+    [Test]
+    public void testGenericInterfaceSimple() {
+      assertAnalyze("testGenericInterfaceSimple", 
+        new [] {
+          INT, OBJ, $"{IGENERIC}<{INT}>", $"{GENERIC_IDENTITY}<{INT}>"
+        },
+        new [] {
+          OBJ_CTOR,
+          $"{VOID} {GENERIC_IDENTITY}<{INT}>::.ctor()",
+          $"{INT} {IGENERIC}<{INT}>::identity({INT})",
+          $"{INT} {GENERIC_IDENTITY}<{INT}>::identity({INT})",
+        }
+      );
+    }
+
+    [Test]
+    public void testGenericInterfaceExtraArg() {
+      assertAnalyze("testGenericInterfaceExtraArg", 
+        new [] {
+          INT, FLT, OBJ,
+          $"{IGENERIC}<{INT}>", $"{GENERIC_EXTRA_ARG_IDENTITY}<{INT}, {FLT}>"
+        },
+        new [] {
+          OBJ_CTOR,
+          $"{VOID} {GENERIC_EXTRA_ARG_IDENTITY}<{INT}, {FLT}>::.ctor()",
+          $"{INT} {IGENERIC}<{INT}>::identity({INT})",
+          $"{INT} {GENERIC_EXTRA_ARG_IDENTITY}<{INT}, {FLT}>::identity({INT})",
+          $"{FLT} {GENERIC_EXTRA_ARG_IDENTITY}<{INT}, {FLT}>::fromA({INT})",
+          $"{INT} {GENERIC_EXTRA_ARG_IDENTITY}<{INT}, {FLT}>::fromB({FLT})",
+        }
+      );
+    }
+
+    [Test]
+    public void testGenericInterfaceCircular() {
+      assertAnalyze("testGenericInterfaceCircular", 
+        new [] {
+          INT, OBJ, BOOL,
+          $"{IGENERIC}<{INT}>", $"{IGENERIC2}<{INT}>",
+          $"{GENERIC_CIRCULAR}<{INT}>", $"{GENERIC_CIRCULAR2}<{INT}>"
+        },
+        new [] {
+          OBJ_CTOR,
+          $"{BOOL} {OBJ}::Equals({OBJ})",
+          $"{BOOL} {OBJ}::Equals({OBJ}, {OBJ})",
+          $"{BOOL} {OBJ}::InternalEquals({OBJ}, {OBJ})",
+          $"{VOID} {GENERIC_CIRCULAR}<{INT}>::.ctor()",
+          $"{VOID} {GENERIC_CIRCULAR2}<{INT}>::.ctor()",
+          $"{INT} {IGENERIC}<{INT}>::identity({INT})",
+          $"{INT} {IGENERIC2}<{INT}>::identity({INT})",
+          $"{INT} {GENERIC_CIRCULAR}<{INT}>::identity({INT})",
+          $"{INT} {GENERIC_CIRCULAR2}<{INT}>::identity({INT})",
+        }
+      );
+    }
+    
+    [Test]
+    public void testGenericInterfaceUnbeknownstImplementation() {
+      assertAnalyze("testGenericInterfaceUnbeknownstImplementation", 
+        new [] {
+          INT, OBJ, $"{IGENERIC}<{INT}>",
+          $"{IGEN_UNKNOWNIMPL}<{INT}>", $"{IGEN_UNKNOWNIMPL_EX}<{INT}>"
+        },
+        new [] {
+          OBJ_CTOR,
+          $"{INT} {IGENERIC}<{INT}>::identity({INT})",
+          $"{INT} {IGEN_UNKNOWNIMPL}<{INT}>::identity({INT})",
+          $"{VOID} {IGEN_UNKNOWNIMPL}<{INT}>::.ctor()",
+          $"{VOID} {IGEN_UNKNOWNIMPL_EX}<{INT}>::.ctor()",
+        }
+      );
+    }
+
+    #endregion
 
     #endregion
   }

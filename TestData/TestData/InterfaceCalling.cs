@@ -55,4 +55,10 @@
       else return value;
     }
   }
+
+  class INonGenericUnknownImplementer {
+    public int identity(int value) { return value; }
+  }
+
+  class INonGenericExtender : INonGenericUnknownImplementer, INonGeneric {}
 }
