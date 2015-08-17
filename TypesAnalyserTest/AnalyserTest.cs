@@ -97,9 +97,18 @@ namespace TypesAnalyserTest {
       INONGENERIC2 = "TestData.INonGeneric2",
       CIRCULAR_IDENTITY = "TestData.CircularIdentity",
       CIRCULAR_IDENTITY2 = "TestData.CircularIdentity2",
+      CIRCULAR_AC_IDENTITY = "TestData.CircularAbstractClassIdentity",
       NORMAL_IDENTITY = "TestData.NormalIdentity",
       LYING_IDENTITY = "TestData.LyingIdentity",
-      RANDOM_IDENTITY = "TestData.RandomIdentity"
+      RANDOM_IDENTITY = "TestData.RandomIdentity",
+      AC_NONGENERIC = "TestData.ACNonGeneric",
+      AC_NONGENERIC2 = "TestData.ACNonGeneric2",
+      AC_CIRCULAR_IDENTITY = "TestData.ACCircularIdentity",
+      AC_CIRCULAR_IDENTITY2 = "TestData.ACCircularIdentity2",
+      AC_CIRCULAR_IF_IDENTITY = "TestData.ACCircularIfaceIdentity",
+      AC_NORMAL_IDENTITY = "TestData.ACNormalIdentity",
+      AC_LYING_IDENTITY = "TestData.ACLyingIdentity",
+      AC_RANDOM_IDENTITY = "TestData.ACRandomIdentity"
     ;
 
     #endregion
@@ -365,6 +374,8 @@ namespace TypesAnalyserTest {
 
     #region Virtual dispatch
 
+    #region Non-Generic interfaces
+
     [Test]
     public void testNonGenericInterfaceCalling() {
       assertAnalyze("testNonGenericInterfaceCalling", 
@@ -416,6 +427,91 @@ namespace TypesAnalyserTest {
           $"{INT} {CIRCULAR_IDENTITY}::identity({INT})",
           $"{VOID} {CIRCULAR_IDENTITY2}::.ctor()",
           $"{INT} {CIRCULAR_IDENTITY2}::identity({INT})",
+        }
+      );
+    }
+
+    #endregion
+
+    #region Non-Generic abstract classes
+
+    [Test]
+    public void testNonGenericAbstractClassCalling() {
+      assertAnalyze("testNonGenericAbstractClassCalling", 
+        new [] {
+          INT, OBJ, AC_NONGENERIC, AC_NORMAL_IDENTITY, AC_LYING_IDENTITY
+        },
+        new [] {
+          OBJ_CTOR,
+          $"{VOID} {AC_NONGENERIC}::.ctor()",
+          $"{INT} {AC_NONGENERIC}::identity({INT})",
+          $"{VOID} {AC_NORMAL_IDENTITY}::.ctor()",
+          $"{INT} {AC_NORMAL_IDENTITY}::identity({INT})",
+          $"{VOID} {AC_LYING_IDENTITY}::.ctor()",
+          $"{INT} {AC_LYING_IDENTITY}::identity({INT})",
+        }
+      );
+    }
+
+    [Test]
+    public void testNonGenericAbstractClassChainedCalling() {
+      assertAnalyze("testNonGenericAbstractClassChainedCalling", 
+        new [] {
+          INT, OBJ, AC_NONGENERIC, AC_NONGENERIC2, AC_NORMAL_IDENTITY, AC_LYING_IDENTITY, AC_RANDOM_IDENTITY
+        },
+        new [] {
+          OBJ_CTOR,
+          $"{VOID} {AC_NONGENERIC}::.ctor()",
+          $"{VOID} {AC_NONGENERIC2}::.ctor()",
+          $"{INT} {AC_NONGENERIC}::identity({INT})",
+          $"{INT} {AC_NONGENERIC2}::identity({INT})",
+          $"{VOID} {AC_NORMAL_IDENTITY}::.ctor()",
+          $"{INT} {AC_NORMAL_IDENTITY}::identity({INT})",
+          $"{VOID} {AC_LYING_IDENTITY}::.ctor()",
+          $"{INT} {AC_LYING_IDENTITY}::identity({INT})",
+          $"{VOID} {AC_RANDOM_IDENTITY}::.ctor()",
+          $"{INT} {AC_RANDOM_IDENTITY}::identity({INT})",
+        }
+      );
+    }
+
+    [Test]
+    public void testNonGenericAbstractClassCircularCalling() {
+      assertAnalyze("testNonGenericAbstractClassCircularCalling", 
+        new [] {
+          INT, OBJ, AC_NONGENERIC, AC_NONGENERIC2, AC_CIRCULAR_IDENTITY, AC_CIRCULAR_IDENTITY2
+        },
+        new [] {
+          OBJ_CTOR,
+          $"{VOID} {AC_NONGENERIC}::.ctor()",
+          $"{VOID} {AC_NONGENERIC2}::.ctor()",
+          $"{INT} {AC_NONGENERIC}::identity({INT})",
+          $"{INT} {AC_NONGENERIC2}::identity({INT})",
+          $"{VOID} {AC_CIRCULAR_IDENTITY}::.ctor()",
+          $"{INT} {AC_CIRCULAR_IDENTITY}::identity({INT})",
+          $"{VOID} {AC_CIRCULAR_IDENTITY2}::.ctor()",
+          $"{INT} {AC_CIRCULAR_IDENTITY2}::identity({INT})",
+        }
+      );
+    }
+
+    #endregion
+
+    [Test]
+    public void testNonGenericAbstractClassCircularCallingInterface() {
+      assertAnalyze("testNonGenericAbstractClassCircularCallingInterface", 
+        new [] {
+          INT, OBJ, INONGENERIC, AC_NONGENERIC, CIRCULAR_AC_IDENTITY, AC_CIRCULAR_IF_IDENTITY
+        },
+        new [] {
+          OBJ_CTOR,
+          $"{VOID} {AC_NONGENERIC}::.ctor()",
+          $"{INT} {INONGENERIC}::identity({INT})",
+          $"{INT} {AC_NONGENERIC}::identity({INT})",
+          $"{VOID} {CIRCULAR_AC_IDENTITY}::.ctor()",
+          $"{INT} {CIRCULAR_AC_IDENTITY}::identity({INT})",
+          $"{VOID} {AC_CIRCULAR_IF_IDENTITY}::.ctor()",
+          $"{INT} {AC_CIRCULAR_IF_IDENTITY}::identity({INT})",
         }
       );
     }

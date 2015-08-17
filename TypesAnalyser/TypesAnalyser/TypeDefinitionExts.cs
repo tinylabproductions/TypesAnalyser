@@ -6,7 +6,9 @@ namespace TypesAnalyser {
     public static bool implements(this TypeDefinition type, TypeDefinition iface) {
       if (type.Interfaces.Any(i => i == iface)) return true;
       var baseTRef = type.BaseType;
-      return baseTRef != null && baseTRef.Resolve().implements(iface);
+      return baseTRef != null && (
+        baseTRef == iface || baseTRef.Resolve().implements(iface)
+      );
     }
   }
 }

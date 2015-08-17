@@ -97,4 +97,26 @@ static class TestEntryPoints {
     INonGeneric iface = new CircularIdentity();
     iface.identity(3);
   }
+
+  public static void testNonGenericAbstractClassCalling() {
+    ACNonGeneric iface = new ACNormalIdentity();
+    iface.identity(3);
+    iface = new ACLyingIdentity();
+    iface.identity(3);
+  }
+
+  public static void testNonGenericAbstractClassChainedCalling() {
+    ACNonGeneric2 iface = new ACRandomIdentity();
+    iface.identity(3);
+  }
+
+  public static void testNonGenericAbstractClassCircularCalling() {
+    ACNonGeneric iface = new ACCircularIdentity();
+    iface.identity(3);
+  }
+
+  public static void testNonGenericAbstractClassCircularCallingInterface() {
+    ACNonGeneric iface = new ACCircularIfaceIdentity();
+    iface.identity(3);
+  }
 }

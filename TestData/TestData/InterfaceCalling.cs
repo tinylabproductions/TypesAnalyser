@@ -45,4 +45,14 @@
       else return value;
     }
   }
+
+  class CircularAbstractClassIdentity : INonGeneric {
+    public int identity(int value) {
+      if (value > 0) {
+        ACNonGeneric iface = new ACCircularIfaceIdentity();
+        return iface.identity(value);
+      }
+      else return value;
+    }
+  }
 }

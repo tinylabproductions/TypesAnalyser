@@ -172,7 +172,7 @@ namespace TypesAnalyser {
       data = data.addType(method.returnType);
       data = method.parameters.Aggregate(data, (current, parameter) => current.addType(parameter));
 
-      if (method.definition.IsVirtual && !method.definition.IsFinal) {
+      if (method.definition.IsVirtual && method.definition.Body == null) {
         // Because we don't know with what concrete types the implementation classes 
         // of virtual methods will be instantiated, we will need to do a separate 
         // analyzing stage once we know all the concrete types.
