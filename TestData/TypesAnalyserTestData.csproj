@@ -42,6 +42,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="TestData\InterfaceCalling.cs" />
     <Compile Include="TestData\IntWrapper.cs" />
     <Compile Include="TestData\IRecursive.cs" />
     <Compile Include="TestEntryPoints.cs" />

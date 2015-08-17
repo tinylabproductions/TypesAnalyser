@@ -71,13 +71,10 @@
     <Compile Include="TypesAnalyser\AbstractTypeImplementations.cs" />
     <Compile Include="TypesAnalyser\ExpandedMethod.cs" />
     <Compile Include="TypesAnalyser\ExpandedType.cs" />
-    <Compile Include="ILSpyAnalyzers\MethodImplementations.cs" />
-    <Compile Include="ILSpyAnalyzers\MethodImplementedBy.cs" />
-    <Compile Include="ILSpyAnalyzers\MethodOverridenBy.cs" />
-    <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TypesAnalyser\Analyser.cs" />
     <Compile Include="TypesAnalyser\EntryPoint.cs" />
+    <Compile Include="TypesAnalyser\TypeDefinitionExts.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

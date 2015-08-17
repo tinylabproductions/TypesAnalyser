@@ -6,21 +6,22 @@ using System.Text;
 using com.tinylabproductions.TLPLib.Functional;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
-using Mono.Collections.Generic;
 
 namespace TypesAnalyser {
   public struct AnalyzerData {
     public readonly ImmutableHashSet<ExpandedType> usedTypes;
     public readonly ImmutableHashSet<ExpandedMethod> analyzedMethods;
-    public readonly ImmutableHashSet<MethodDefinition> calledVirtualMethods;
+    public readonly ImmutableHashSet<MethodDefinition> virtualMethodsToAnalyze, analyzedVirtualMethods;
 
     public AnalyzerData(
       ImmutableHashSet<ExpandedType> usedTypes, ImmutableHashSet<ExpandedMethod> analyzedMethods, 
-      ImmutableHashSet<MethodDefinition> calledVirtualMethods
+      ImmutableHashSet<MethodDefinition> virtualMethodsToAnalyze, 
+      ImmutableHashSet<MethodDefinition> analyzedVirtualMethods
     ) {
       this.usedTypes = usedTypes;
       this.analyzedMethods = analyzedMethods;
-      this.calledVirtualMethods = calledVirtualMethods;
+      this.virtualMethodsToAnalyze = virtualMethodsToAnalyze;
+      this.analyzedVirtualMethods = analyzedVirtualMethods;
     }
 
     public bool hasType(ExpandedType type) { return usedTypes.Contains(type); }
@@ -28,17 +29,24 @@ namespace TypesAnalyser {
 
     public AnalyzerData addType(ExpandedType type) {
       return hasType(type)
-        ? this : new AnalyzerData(usedTypes.Add(type), analyzedMethods, calledVirtualMethods);
+        ? this : new AnalyzerData(usedTypes.Add(type), analyzedMethods, virtualMethodsToAnalyze, analyzedVirtualMethods);
     }
 
     public AnalyzerData addMethod(ExpandedMethod method) {
       return hasMethod(method)
-        ? this : new AnalyzerData(usedTypes, analyzedMethods.Add(method), calledVirtualMethods);
+        ? this : new AnalyzerData(usedTypes, analyzedMethods.Add(method), virtualMethodsToAnalyze, analyzedVirtualMethods);
     }
 
     public AnalyzerData addVirtualMethod(MethodDefinition method) {
-      return calledVirtualMethods.Contains(method)
-        ? this : new AnalyzerData(usedTypes, analyzedMethods, calledVirtualMethods.Add(method));
+      return virtualMethodsToAnalyze.Contains(method) || analyzedVirtualMethods.Contains(method)
+        ? this : new AnalyzerData(usedTypes, analyzedMethods, virtualMethodsToAnalyze.Add(method), analyzedVirtualMethods);
+    }
+
+    public AnalyzerData analyzedVirtualMethod(MethodDefinition virtualMethod) {
+      return new AnalyzerData(
+        usedTypes, analyzedMethods, 
+        virtualMethodsToAnalyze.Remove(virtualMethod), analyzedVirtualMethods.Add(virtualMethod)
+      );
     }
   }
 
@@ -106,7 +114,7 @@ namespace TypesAnalyser {
     ) {
       var data = new AnalyzerData(
         ImmutableHashSet<ExpandedType>.Empty, ImmutableHashSet<ExpandedMethod>.Empty,
-        ImmutableHashSet<MethodDefinition>.Empty
+        ImmutableHashSet<MethodDefinition>.Empty, ImmutableHashSet<MethodDefinition>.Empty
       );
       foreach (var entryMethod in entryPoints) {
         var exEntryMethod = ExpandedMethod.create(
@@ -116,6 +124,23 @@ namespace TypesAnalyser {
         if (!data.hasMethod(exEntryMethod)) {
           log.log("Entry", exEntryMethod);
           data = analyze(data, exEntryMethod, log);
+        }
+      }
+
+      // Once we know all used types, resolve the called virtual methods.
+      // Iterate in a loop because expanding virtual method bodies might invoke additional
+      // virtual methods.
+      while (!data.virtualMethodsToAnalyze.IsEmpty) {
+        foreach (var virtualMethod in data.virtualMethodsToAnalyze) {
+          var declaring = virtualMethod.DeclaringType;
+          foreach (var usedType in data.usedTypes.Where(et => et.implements(declaring))) {
+            var matching = MetadataResolver.GetMethod(usedType.definition.Methods, virtualMethod);
+            var exMatching = ExpandedMethod.create(
+              usedType, matching,
+              ImmutableDictionary<GenericParameter, ExpandedType>.Empty
+            );
+            data = analyze(data, exMatching, log).analyzedVirtualMethod(virtualMethod);
+          }
         }
       }
       return data;
@@ -147,7 +172,14 @@ namespace TypesAnalyser {
       data = data.addType(method.returnType);
       data = method.parameters.Aggregate(data, (current, parameter) => current.addType(parameter));
 
-      if (method.definition.Body != null) {
+      if (method.definition.IsVirtual && !method.definition.IsFinal) {
+        // Because we don't know with what concrete types the implementation classes 
+        // of virtual methods will be instantiated, we will need to do a separate 
+        // analyzing stage once we know all the concrete types.
+        data = data.addType(method.declaringType);
+        data = data.addVirtualMethod(method.definition);
+      }
+      else if (method.definition.Body != null) {
         var body = method.definition.Body;
         foreach (var instruction in body.Instructions) {
           if (
@@ -159,12 +191,6 @@ namespace TypesAnalyser {
             data = analyze(data, expanded, log);
           }
         }
-      }
-      else if (method.definition.IsVirtual) {
-        // Because we don't know with what concrete types the implementation classes 
-        // of virtual methods will be instantiated, we will need to do a separate 
-        // analyzing stage once we know all the concrete types.
-        data = data.addVirtualMethod(method.definition);
       }
       else if (! method.definition.IsInternalCall) {
         throw new Exception("Method body null when not expected: " + method);

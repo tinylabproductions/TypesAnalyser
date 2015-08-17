@@ -1,4 +1,5 @@
 ﻿using TestData;
+
 // ReSharper disable UnusedVariable
 
 static class TestEntryPoints {
@@ -78,5 +79,22 @@ static class TestEntryPoints {
   public static void testRecursiveTypeWrapExtensionMethod() {
     var r = Recursive.a(3);
     var w2 = r.wrap2_ext("3");
+  }
+
+  public static void testNonGenericInterfaceCalling() {
+    INonGeneric iface = new NormalIdentity();
+    iface.identity(3);
+    iface = new LyingIdentity();
+    iface.identity(3);
+  }
+
+  public static void testNonGenericInterfaceChainedCalling() {
+    INonGeneric2 iface = new RandomIdentity();
+    iface.identity(3);
+  }
+
+  public static void testNonGenericInterfaceCircularCalling() {
+    INonGeneric iface = new CircularIdentity();
+    iface.identity(3);
   }
 }

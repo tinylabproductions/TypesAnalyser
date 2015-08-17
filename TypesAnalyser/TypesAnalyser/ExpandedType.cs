@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Text;
 using com.tinylabproductions.TLPLib.Extensions;
 using com.tinylabproductions.TLPLib.Functional;
@@ -100,5 +101,7 @@ namespace TypesAnalyser {
       }
       return new ExpandedType(definition, EMPTY_GENERIC_PARAMETERS, EMPTY_GENERIC_LOOKUP);
     }
+
+    public bool implements(TypeDefinition iface) { return definition.implements(iface); }
   }
 }

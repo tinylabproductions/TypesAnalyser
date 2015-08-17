@@ -92,7 +92,14 @@ namespace TypesAnalyserTest {
       TUPLE1 = "TestData.Tuple1`1",
       TUPLE1_C = "TestData.Tuple1C`1",
       TUPLE2_S = "TestData.Tuple2",
-      TUPLE2 = "TestData.Tuple2`2"
+      TUPLE2 = "TestData.Tuple2`2",
+      INONGENERIC = "TestData.INonGeneric",
+      INONGENERIC2 = "TestData.INonGeneric2",
+      CIRCULAR_IDENTITY = "TestData.CircularIdentity",
+      CIRCULAR_IDENTITY2 = "TestData.CircularIdentity2",
+      NORMAL_IDENTITY = "TestData.NormalIdentity",
+      LYING_IDENTITY = "TestData.LyingIdentity",
+      RANDOM_IDENTITY = "TestData.RandomIdentity"
     ;
 
     #endregion
@@ -350,6 +357,65 @@ namespace TypesAnalyserTest {
           $"{VOID} {TUPLE2}<{INT}, {STR}>::.ctor({INT}, {STR})",
           $"{TUPLE2}<{INT}, {STR}> {TUPLE2}<{INT}, {STR}>::a({INT}, {STR})",
           $"{TUPLE2}<{INT}, {STR}> {TUPLE2_S}::a<{INT}, {STR}>({INT}, {STR})",
+        }
+      );
+    }
+
+    #endregion
+
+    #region Virtual dispatch
+
+    [Test]
+    public void testNonGenericInterfaceCalling() {
+      assertAnalyze("testNonGenericInterfaceCalling", 
+        new [] {
+          INT, OBJ, INONGENERIC, NORMAL_IDENTITY, LYING_IDENTITY
+        },
+        new [] {
+          OBJ_CTOR,
+          $"{INT} {INONGENERIC}::identity({INT})",
+          $"{VOID} {NORMAL_IDENTITY}::.ctor()",
+          $"{INT} {NORMAL_IDENTITY}::identity({INT})",
+          $"{VOID} {LYING_IDENTITY}::.ctor()",
+          $"{INT} {LYING_IDENTITY}::identity({INT})",
+        }
+      );
+    }
+
+    [Test]
+    public void testNonGenericInterfaceChainedCalling() {
+      assertAnalyze("testNonGenericInterfaceChainedCalling", 
+        new [] {
+          INT, OBJ, INONGENERIC, INONGENERIC2, NORMAL_IDENTITY, LYING_IDENTITY, RANDOM_IDENTITY
+        },
+        new [] {
+          OBJ_CTOR,
+          $"{INT} {INONGENERIC}::identity({INT})",
+          $"{INT} {INONGENERIC2}::identity({INT})",
+          $"{VOID} {NORMAL_IDENTITY}::.ctor()",
+          $"{INT} {NORMAL_IDENTITY}::identity({INT})",
+          $"{VOID} {LYING_IDENTITY}::.ctor()",
+          $"{INT} {LYING_IDENTITY}::identity({INT})",
+          $"{VOID} {RANDOM_IDENTITY}::.ctor()",
+          $"{INT} {RANDOM_IDENTITY}::identity({INT})",
+        }
+      );
+    }
+
+    [Test]
+    public void testNonGenericInterfaceCircularCalling() {
+      assertAnalyze("testNonGenericInterfaceCircularCalling", 
+        new [] {
+          INT, OBJ, INONGENERIC, INONGENERIC2, CIRCULAR_IDENTITY, CIRCULAR_IDENTITY2
+        },
+        new [] {
+          OBJ_CTOR,
+          $"{INT} {INONGENERIC}::identity({INT})",
+          $"{INT} {INONGENERIC2}::identity({INT})",
+          $"{VOID} {CIRCULAR_IDENTITY}::.ctor()",
+          $"{INT} {CIRCULAR_IDENTITY}::identity({INT})",
+          $"{VOID} {CIRCULAR_IDENTITY2}::.ctor()",
+          $"{INT} {CIRCULAR_IDENTITY2}::identity({INT})",
         }
       );
     }
