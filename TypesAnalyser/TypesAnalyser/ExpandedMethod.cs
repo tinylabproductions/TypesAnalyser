@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using com.tinylabproductions.TLPLib.Extensions;
@@ -15,8 +16,8 @@ namespace TypesAnalyser {
     public readonly ImmutableList<ExpandedType> genericArguments, parameters;
     public readonly ImmutableDictionary<GenericParameter, ExpandedType> genericParameterToExType;
 
-    private readonly com.tinylabproductions.TLPLib.Functional.Lazy<string> _name;
-    public string name => _name.get;
+    private readonly string _name;
+    public string name => _name;
 
     public ExpandedMethod(
       ExpandedType returnType, ExpandedType declaringType, MethodDefinition definition,
@@ -29,7 +30,7 @@ namespace TypesAnalyser {
       this.genericArguments = genericArguments;
       this.parameters = parameters;
       this.genericParameterToExType = genericParameterToExType;
-      _name = F.lazy(() => {
+      _name = declaringType.locally(() => {
         var sb = new StringBuilder();
         sb.Append(returnType);
         sb.Append(' ');
@@ -47,7 +48,7 @@ namespace TypesAnalyser {
     #region Equality
 
     public bool Equals(ExpandedMethod other) {
-      return Equals(definition, other.definition) && returnType.Equals(other.returnType) && declaringType.Equals(other.declaringType) && Equals(parameters, other.parameters);
+      return string.Equals(_name, other._name);
     }
 
     public override bool Equals(object obj) {
@@ -56,13 +57,7 @@ namespace TypesAnalyser {
     }
 
     public override int GetHashCode() {
-      unchecked {
-        var hashCode = (definition != null ? definition.GetHashCode() : 0);
-        hashCode = (hashCode * 397) ^ returnType.GetHashCode();
-        hashCode = (hashCode * 397) ^ declaringType.GetHashCode();
-        hashCode = (hashCode * 397) ^ (parameters != null ? parameters.GetHashCode() : 0);
-        return hashCode;
-      }
+      return (_name != null ? _name.GetHashCode() : 0);
     }
 
     public static bool operator ==(ExpandedMethod left, ExpandedMethod right) { return left.Equals(right); }
@@ -135,14 +130,16 @@ namespace TypesAnalyser {
     }
 
     /* Make a dict from generic parameter name to resolved type definition. */
-    private static ImmutableDictionary<GenericParameter, ExpandedType> genericArgumentsDict(
+    public static ImmutableDictionary<GenericParameter, ExpandedType> genericArgumentsDict(
       IList<TypeReference> genericArguments,
       IList<GenericParameter> genericParameters,
       ImmutableDictionary<GenericParameter, ExpandedType> callerGenericParameters
     ) {
-      if (genericParameters.Count != genericArguments.Count)
-        throw new Exception("Expected generic parameter count " + genericParameters.Count +
-                            " to be equal to generic argument count " + genericArguments.Count);
+      Debug.Assert(
+        genericParameters.Count == genericArguments.Count,
+        "Expected generic parameter count " + genericParameters.Count +
+        " to be equal to generic argument count " + genericArguments.Count
+      );
 
       var dict = ImmutableDictionary<GenericParameter, ExpandedType>.Empty;
       for (var idx = 0; idx < genericParameters.Count; idx++) {

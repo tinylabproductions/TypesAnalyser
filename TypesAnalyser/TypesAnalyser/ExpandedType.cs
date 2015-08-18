@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using com.tinylabproductions.TLPLib.Extensions;
-using com.tinylabproductions.TLPLib.Functional;
 using Mono.Cecil;
 
 namespace TypesAnalyser {
@@ -36,31 +35,41 @@ namespace TypesAnalyser {
      */
     public readonly ImmutableDictionary<GenericParameter, ExpandedType> genericParametersToArguments;
 
-    private readonly com.tinylabproductions.TLPLib.Functional.Lazy<string> _name;
-    public string name => _name.get;
+    public readonly bool isArray;
+
+    private readonly string _name;
+    public string name => _name;
 
     public ExpandedType(
-      TypeDefinition definition,
+      TypeDefinition definition, bool isArray,
       ImmutableList<ExpandedType> genericArguments,
       ImmutableDictionary<GenericParameter, ExpandedType> genericParametersToArguments
     ) : this() {
       Debug.Assert(definition != null, "definition != null");
 
       this.definition = definition;
+      this.isArray = isArray;
       this.genericArguments = genericArguments;
       this.genericParametersToArguments = genericParametersToArguments;
-      _name = F.lazy(() => {
+      _name = definition.locally(() => {
         var sb = new StringBuilder();
         sb.Append(definition.FullName);
         if (!genericArguments.isEmpty()) sb.Append(genericArguments.mkString(", ", "<", ">"));
+        if (isArray) sb.Append("[]");
         return sb.ToString();
       });
+    }
+
+    ExpandedType withIsArray(bool isArray) {
+      return new ExpandedType(
+        definition, isArray, genericArguments, genericParametersToArguments
+      );
     }
 
     #region Equality
 
     public bool Equals(ExpandedType other) {
-      return Equals(definition, other.definition) && Equals(genericArguments, other.genericArguments);
+      return string.Equals(_name, other._name);
     }
 
     public override bool Equals(object obj) {
@@ -69,7 +78,7 @@ namespace TypesAnalyser {
     }
 
     public override int GetHashCode() {
-      unchecked { return ((definition != null ? definition.GetHashCode() : 0) * 397) ^ (genericArguments != null ? genericArguments.GetHashCode() : 0); }
+      return (_name != null ? _name.GetHashCode() : 0);
     }
 
     public static bool operator ==(ExpandedType left, ExpandedType right) { return left.Equals(right); }
@@ -77,12 +86,20 @@ namespace TypesAnalyser {
 
     #endregion
 
-    public override string ToString() { return _name.get; }
+    public override string ToString() { return _name; }
 
     public static ExpandedType create(
       TypeReference _reference, IImmutableDictionary<GenericParameter, ExpandedType> generics
     ) {
-      var reference = _reference.IsByReference ? ((ByReferenceType) _reference).ElementType : _reference;
+      var reference = _reference;
+      var isArray = false;
+      if (reference.IsByReference)
+        reference = ((ByReferenceType) reference).ElementType;
+      if (reference.IsArray) {
+        isArray = true;
+        reference = ((ArrayType) reference).ElementType;
+      }
+        
       var definition = reference.Resolve();
       if (reference.IsGenericInstance) {
         var gRef = (GenericInstanceType) reference;
@@ -97,15 +114,24 @@ namespace TypesAnalyser {
           dict = dict.Add(definition.GenericParameters[idx], exParam);
         }
 
-        return new ExpandedType(definition, parameters, dict);
+        return new ExpandedType(definition, isArray, parameters, dict);
       }
       if (reference.IsGenericParameter) {
         var gParam = (GenericParameter) reference;
-        return generics[gParam];
+        return generics[gParam].withIsArray(isArray);
       }
-      return new ExpandedType(definition, EMPTY_GENERIC_PARAMETERS, EMPTY_GENERIC_LOOKUP);
+      return new ExpandedType(definition, isArray, EMPTY_GENERIC_PARAMETERS, EMPTY_GENERIC_LOOKUP);
     }
 
-    public bool implements(TypeDefinition iface) { return definition.implements(iface); }
+    public bool implements(ExpandedType iface) {
+      if (definition.IsInterface) return false;
+      var genericParametersToArguments = this.genericParametersToArguments;
+      if (definition.Interfaces.Any(i => 
+        create(i, genericParametersToArguments) == iface
+      )) return true;
+      if (definition.BaseType == null) return false;
+      var baseType = create(definition.BaseType, genericParametersToArguments);
+      return baseType == iface || baseType.implements(iface);
+    }
   }
 }

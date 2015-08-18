@@ -32,5 +32,7 @@ namespace TypesAnalyser {
     public static bool operator !=(VirtualMethod left, VirtualMethod right) { return !left.Equals(right); }
 
     #endregion
+
+    public override string ToString() { return $"[{definition} in {declaringType}]"; }
   }
 }

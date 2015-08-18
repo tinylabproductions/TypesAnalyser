@@ -38,6 +38,10 @@ namespace TypesAnalyserTest {
       return entryMethod(TEP, testMethodName(name));
     }
 
+    AnalyserTestData analyze(string name) {
+      return AnalyserTestData.create(Analyser.analyze(analyserTestMethod(name), logger));
+    }
+
     void assertAnalyze(
       string name, 
       IEnumerable<string> usedTypes, IEnumerable<string> analyzedMethods
@@ -45,7 +49,7 @@ namespace TypesAnalyserTest {
       var assertedUsedTypes = usedTypes.ToImmutableSortedSet().Add(VOID).Add(TEP);
       var assertedAnalyzedMethods = analyzedMethods.ToImmutableSortedSet()
         .Add($"{VOID} {TEP}::{testMethodName(name)}()");
-      var data = AnalyserTestData.create(Analyser.analyze(analyserTestMethod(name), logger));
+      var data = analyze(name);
 
       var usedButNotExpectedTypes = data.usedTypes.Except(assertedUsedTypes);
       var expectedButNotUsedTypes = assertedUsedTypes.Except(data.usedTypes);
@@ -84,6 +88,7 @@ namespace TypesAnalyserTest {
       DISPLAY_CLASS = "c__DisplayClass",
       VOID = "System.Void",
       INT = "System.Int32",
+      INT_A = "System.Int32[]",
       INT_PTR = "System.IntPtr",
       BOOL = "System.Boolean",
       DELEGATE = "System.Delegate",
@@ -105,6 +110,10 @@ namespace TypesAnalyserTest {
       INT_WRAPPER2 = "TestData.IntWrapper2",
       RECURSIVE = "TestData.Recursive`1",
       RECURSIVE_S = "TestData.Recursive",
+      PRIV_INNER_STRUCT = "TestData.PrivateInnerStruct`1",
+      PRIV_INNER_STRUCT_S = "TestData.PrivateInnerStruct`1/Inner",
+      PUBLIC_INNER_RECURSIVE = "TestData.PublicInnerRecursive`1",
+      PUBLIC_INNER_RECURSIVE_NODE = "TestData.PublicInnerRecursive`1/Node",
       TUPLE1_S = "TestData.Tuple1",
       TUPLE1 = "TestData.Tuple1`1",
       TUPLE1_C = "TestData.Tuple1C`1",
@@ -201,6 +210,14 @@ namespace TypesAnalyserTest {
         new [] {$"{VOID} {STORE}::genRefMethod<{INT}>({INT}, {INT})"}
       );
     }
+
+    [Test]
+    public void testGenRefArrayMethod() {
+      assertAnalyze("testGenRefArrayMethod", 
+        new [] {INT, INT_A},
+        new [] {$"{VOID} {STORE}::genRefArrMethod<{INT}>({INT_A}, {INT})"}
+      );
+    }
     
     [Test]
     public void testOutMethod() {
@@ -215,6 +232,14 @@ namespace TypesAnalyserTest {
       assertAnalyze("testGenOutMethod", 
         new [] {INT},
         new [] {$"{VOID} {STORE}::genOutMethod<{INT}>({INT}, {INT})"}
+      );
+    }
+    
+    [Test]
+    public void testGenOutArrayMethod() {
+      assertAnalyze("testGenOutArrayMethod", 
+        new [] {INT, INT_A},
+        new [] {$"{VOID} {STORE}::genOutArrMethod<{INT}>({INT_A}, {INT})"}
       );
     }
 
@@ -572,6 +597,54 @@ namespace TypesAnalyserTest {
       );
     }
 
+    [Test]
+    public void testGenericArrayViaStatic() {
+      assertAnalyze("testGenericArrayViaStatic",
+        new[] {INT_A},
+        new[] {$"{INT_A} {TUPLE1_S}::arrIdentity<{INT}>({INT_A})"}
+      );
+    }
+
+    [Test]
+    public void testGenericArrayViaGenericStatic() {
+      assertAnalyze("testGenericArrayViaGenericStatic",
+        new[] {INT_A},
+        new[] {$"{INT_A} {TUPLE1}<{INT}>::arrIdentity({INT_A})"}
+      );
+    }
+
+    [Test]
+    public void testPrivateInnerStruct() {
+      assertAnalyze("testPrivateInnerStruct",
+        new[] {
+          INT, OBJ,
+          $"{PRIV_INNER_STRUCT}<{INT}>",
+          $"{PRIV_INNER_STRUCT_S}<{INT}>", $"{PRIV_INNER_STRUCT_S}<{INT}>[]"
+        },
+        new[] {
+          OBJ_CTOR,
+          $"{VOID} {PRIV_INNER_STRUCT}<{INT}>::.ctor()",
+          $"{VOID} {PRIV_INNER_STRUCT}<{INT}>::add({INT})",
+        }
+      );
+    }
+
+    [Test]
+    public void testPublicInnerRecursive() {
+      assertAnalyze("testPublicInnerRecursive",
+        new[] {
+          INT, OBJ,
+          $"{PUBLIC_INNER_RECURSIVE}<{INT}>",
+          $"{PUBLIC_INNER_RECURSIVE_NODE}<{INT}>",
+        },
+        new[] {
+          OBJ_CTOR,
+          $"{VOID} {PUBLIC_INNER_RECURSIVE}<{INT}>::.ctor()",
+          $"{VOID} {PUBLIC_INNER_RECURSIVE_NODE}<{INT}>::.ctor()",
+        }
+      );
+    }
+
     #endregion
 
     #region Virtual dispatch
@@ -815,5 +888,26 @@ namespace TypesAnalyserTest {
     #endregion
 
     #endregion
+
+    [Test]
+    public void testMethodUniqueness() {
+      var data = analyze("testMethodUniqueness");
+      Assert.AreEqual(
+        data.usedTypes.Count, data.data.usedTypes.Count,
+        "all used types should be unique by their expanded name"
+      );
+      Assert.AreEqual(
+        data.analyzedMethods.Count, data.data.analyzedMethods.Count,
+        "all analyzed methods should be unique by their expanded name"
+      );
+    }
+
+    [Test]
+    public void testLinqSelect() {
+      assertAnalyze("testLinqSelect",
+        new[] {INT},
+        new[] {$"{TUPLE1}<{INT}>"}
+      );
+    }
   }
 }

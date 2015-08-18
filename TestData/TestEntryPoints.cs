@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using TestData;
 
 // ReSharper disable UnusedVariable
@@ -74,6 +76,11 @@ static class TestEntryPoints {
     Store.genRefMethod(ref a, 5);
   }
 
+  public static void testGenRefArrayMethod() {
+    var a = new [] {3};
+    Store.genRefArrMethod(ref a, 5);
+  }
+
   public static void testOutMethod() {
     int a;
     Store.outMethod(out a);
@@ -82,6 +89,11 @@ static class TestEntryPoints {
   public static void testGenOutMethod() {
     int a;
     Store.genOutMethod(out a, 5);
+  }
+
+  public static void testGenOutArrayMethod() {
+    int[] a;
+    Store.genOutArrMethod(out a, 5);
   }
 
   public static void testStaticNonGeneric() {
@@ -224,5 +236,26 @@ static class TestEntryPoints {
   public static void testGenericInterfaceUnbeknownstImplementation() {
     IGenericInterfaceCalling<int> iface = new IGenericExtender<int>();
     iface.identity(3);
+  }
+
+  public static void testMethodUniqueness() { var a = string.Concat("3", "4"); }
+
+  public static void testGenericArrayViaStatic() { var x = Tuple1.arrIdentity(new[] {1}); }
+  public static void testGenericArrayViaGenericStatic() { var x = Tuple1<int>.arrIdentity(new[] {1}); }
+
+  public static void testPrivateInnerStruct() {
+    new PrivateInnerStruct<int>().add(3);
+  }
+
+  public static void testPublicInnerRecursive() {
+    var x = new PublicInnerRecursive<int>(3);
+  }
+
+  public static void testLinqSelect() {
+    var intWrappers = new[] {new IntWrapper(3)};
+    // 	Subject<Collider2D>[] observables = (from b in componentsInChildren
+    //  select b.gameObject.AddComponent<Trigger2D>().triggerEnter).ToArray<Subject<Collider2D>>();
+//    var b = intWrappers.Select(x => Tuple1.a(x.value)).ToArray();
+    var b = (from x in intWrappers select Tuple1.a(x.value)).ToArray();
   }
 }

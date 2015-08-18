@@ -8,7 +8,9 @@
 
     public static void refMethod(ref int i) { i += 3; }
     public static void genRefMethod<A>(ref A i, A i2) { i = i2; }
+    public static void genRefArrMethod<A>(ref A[] i, A i2) { i[0] = i2; }
     public static void outMethod(out int i) { i = 3; }
     public static void genOutMethod<A>(out A i, A i2) { i = i2; }
+    public static void genOutArrMethod<A>(out A[] i, A i2) { i = new []{i2}; }
   }
 }

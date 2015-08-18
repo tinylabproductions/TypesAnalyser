@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using com.tinylabproductions.TLPLib.Extensions;
 using com.tinylabproductions.TLPLib.Functional;
@@ -17,6 +18,71 @@ namespace TypesAnalyser {
   }
 
   public class UnityEntryPoint : IEntryPoint {
+    public readonly ImmutableHashSet<string> entryPointMethods = new[] {
+      "Awake",
+      "FixedUpdate",
+      "LateUpdate",
+      "OnAnimatorIK",
+      "OnAnimatorMove",
+      "OnApplicationFocus",
+      "OnApplicationPause",
+      "OnApplicationQuit",
+      "OnAudioFilterRead",
+      "OnBecameInvisible",
+      "OnBecameVisible",
+      "OnCollisionEnter",
+      "OnCollisionEnter2D",
+      "OnCollisionExit",
+      "OnCollisionExit2D",
+      "OnCollisionStay",
+      "OnCollisionStay2D",
+      "OnConnectedToServer",
+      "OnControllerColliderHit",
+      "OnDestroy",
+      "OnDisable",
+      "OnDisconnectedFromServer",
+      "OnDrawGizmos",
+      "OnDrawGizmosSelected",
+      "OnEnable",
+      "OnFailedToConnect",
+      "OnFailedToConnectToMasterServer",
+      "OnGUI",
+      "OnJointBreak",
+      "OnLevelWasLoaded",
+      "OnMasterServerEvent",
+      "OnMouseDown",
+      "OnMouseDrag",
+      "OnMouseEnter",
+      "OnMouseExit",
+      "OnMouseOver",
+      "OnMouseUp",
+      "OnMouseUpAsButton",
+      "OnNetworkInstantiate",
+      "OnParticleCollision",
+      "OnPlayerConnected",
+      "OnPlayerDisconnected",
+      "OnPostRender",
+      "OnPreCull",
+      "OnPreRender",
+      "OnRenderImage",
+      "OnRenderObject",
+      "OnSerializeNetworkView",
+      "OnServerInitialized",
+      "OnTransformChildrenChanged",
+      "OnTransformParentChanged",
+      "OnTriggerEnter",
+      "OnTriggerEnter2D",
+      "OnTriggerExit",
+      "OnTriggerExit2D",
+      "OnTriggerStay",
+      "OnTriggerStay2D",
+      "OnValidate",
+      "OnWillRenderObject",
+      "Reset",
+      "Start",
+      "Update",
+    }.ToImmutableHashSet();
+
     public readonly ExpandedType type;
 
     public UnityEntryPoint(ExpandedType type) {
@@ -44,8 +110,9 @@ namespace TypesAnalyser {
     }
 
     public IEnumerable<MethodDefinition> entryMethods {
-      // TODO: this probably needs to filter based on all unity callback names.
-      get { return type.definition.Methods.Where(EntryPoint.canBeEntryPoint); }
+      get { return type.definition.Methods.Where(m => 
+        entryPointMethods.Contains(m.Name) && EntryPoint.canBeEntryPoint(m) && !m.IsStatic
+      ); }
     }
   }
 }

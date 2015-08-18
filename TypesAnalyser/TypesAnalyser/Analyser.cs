@@ -50,41 +50,6 @@ namespace TypesAnalyser {
     }
   }
 
-  public interface AnalyserLogger {
-    void incIndent();
-    void decIndent();
-    void log(string prefix, ExpandedMethod method);
-    void log(ExpandedType type, string msg);
-    void log(string msg);
-  }
-
-  public class StdoutLogger : AnalyserLogger {
-    uint indent;
-
-    public void incIndent() { indent += 2; }
-    public void decIndent() { indent -= 2; }
-    public void log(string prefix, ExpandedMethod method) { log(prefix + " " + method); }
-    public void log(ExpandedType type, string msg) { log("[" + type.name + "] " + msg); }
-    public void log(string msg) {
-      indentLog(indent);
-      Console.WriteLine(msg);
-    }
-
-    static void indentLog(uint indentation) {
-      var sb = new StringBuilder();
-      for (var idx = 0u; idx < indentation; idx++) sb.Append(' ');
-      Console.Write(sb.ToString());
-    }
-  }
-
-  public class NoopLogger : AnalyserLogger {
-    public void incIndent() {}
-    public void decIndent() {}
-    public void log(string prefix, ExpandedMethod method) {}
-    public void log(ExpandedType type, string msg) {}
-    public void log(string msg) {}
-  }
-
   public static class Analyser {
     public static AnalyzerData analyze(
       string fileName, 
@@ -133,14 +98,14 @@ namespace TypesAnalyser {
       while (!data.virtualMethodsToAnalyze.IsEmpty) {
         foreach (var virtualMethod in data.virtualMethodsToAnalyze) {
           var declaring = virtualMethod.declaringType;
-          foreach (var _usedType in data.usedTypes.Where(et => et.implements(declaring.definition))) {
+          foreach (var _usedType in data.usedTypes.Where(et => et.implements(declaring))) {
             var usedType = _usedType;
             MethodDefinition matching = null;
             while (matching == null) {
               matching = MetadataResolver.GetMethod(usedType.definition.Methods, virtualMethod.definition);
               if (matching == null) {
                 if (usedType.definition.BaseType == null) throw new Exception(
-                  "Can't find implementation for " + virtualMethod + " in " + usedType + "!"
+                  "Can't find implementation for [" + virtualMethod + "] in [" + _usedType + "]!"
                 );
                 usedType = ExpandedType.create(
                   usedType.definition.BaseType,
@@ -178,10 +143,10 @@ namespace TypesAnalyser {
       AnalyzerData data, ExpandedMethod method, AnalyserLogger log
     ) {
       if (data.hasMethod(method)) return data;
+      log.log("method", method);
       log.incIndent();
 
       data = data.addMethod(method);
-      log.log("method", method);
 
       if (method.definition.IsConstructor) data = data.addType(method.declaringType);
       data = data.addType(method.returnType);
@@ -206,7 +171,26 @@ namespace TypesAnalyser {
             || instruction.OpCode == OpCodes.Ldsfld
           ) {
             var fieldDef = (FieldReference) instruction.Operand;
-            var exFieldDef = ExpandedType.create(fieldDef.FieldType, method.genericParameterToExType);
+            var fieldGenerics = method.genericParameterToExType;
+            if (fieldDef.FieldType.IsNested) {
+              if (fieldDef.FieldType.IsGenericParameter) {
+                var generics = ExpandedMethod.genericArgumentsDict(
+                  ((GenericInstanceType) fieldDef.DeclaringType).GenericArguments,
+                  fieldDef.FieldType.DeclaringType.GenericParameters,
+                  fieldGenerics
+                );
+                fieldGenerics = fieldGenerics.AddRange(generics);
+              }
+              if (fieldDef.FieldType.IsGenericInstance) {
+                var generics = ExpandedMethod.genericArgumentsDict(
+                  ((GenericInstanceType)fieldDef.FieldType).GenericArguments,
+                  fieldDef.FieldType.GetElementType().GenericParameters,
+                  fieldGenerics
+                );
+                fieldGenerics = fieldGenerics.AddRange(generics);
+              }
+            }
+            var exFieldDef = ExpandedType.create(fieldDef.FieldType, fieldGenerics);
             var exDeclaringType = ExpandedType.create(fieldDef.DeclaringType, method.genericParameterToExType);
             data = data.addType(exFieldDef).addType(exDeclaringType);
           }
@@ -223,7 +207,7 @@ namespace TypesAnalyser {
           }
         }
       }
-      else if (! method.definition.IsInternalCall) {
+      else if (! (method.definition.IsInternalCall || method.definition.IsPInvokeImpl)) {
         throw new Exception("Method body null when not expected: " + method);
       }
       log.decIndent();

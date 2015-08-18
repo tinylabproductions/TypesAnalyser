@@ -69,6 +69,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="TypesAnalyser\AbstractTypeImplementations.cs" />
+    <Compile Include="TypesAnalyser\AnalyserLogger.cs" />
     <Compile Include="TypesAnalyser\ExpandedMethod.cs" />
     <Compile Include="TypesAnalyser\ExpandedType.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
