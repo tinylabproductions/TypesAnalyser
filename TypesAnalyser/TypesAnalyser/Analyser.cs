@@ -181,10 +181,15 @@ namespace TypesAnalyser {
                 );
                 fieldGenerics = fieldGenerics.AddRange(generics);
               }
-              if (fieldDef.FieldType.IsGenericInstance) {
+              var gFieldType = fieldDef.FieldType as GenericInstanceType;
+              if (gFieldType != null) {
                 var generics = ExpandedMethod.genericArgumentsDict(
-                  ((GenericInstanceType)fieldDef.FieldType).GenericArguments,
-                  fieldDef.FieldType.GetElementType().GenericParameters,
+                  gFieldType.IsValueType 
+                    ? (IList<TypeReference>) gFieldType.GenericArguments
+                    : gFieldType.DeclaringType.GenericParameters.Cast<TypeReference>().ToList(),
+                  gFieldType.IsValueType 
+                    ? (IList<GenericParameter>) gFieldType.ElementType.GenericParameters
+                    : gFieldType.GenericArguments.Cast<GenericParameter>().ToList(),
                   fieldGenerics
                 );
                 fieldGenerics = fieldGenerics.AddRange(generics);

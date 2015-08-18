@@ -639,7 +639,7 @@ namespace TypesAnalyserTest {
         },
         new[] {
           OBJ_CTOR,
-          $"{VOID} {PUBLIC_INNER_RECURSIVE}<{INT}>::.ctor()",
+          $"{VOID} {PUBLIC_INNER_RECURSIVE}<{INT}>::.ctor({INT})",
           $"{VOID} {PUBLIC_INNER_RECURSIVE_NODE}<{INT}>::.ctor()",
         }
       );
