@@ -4,6 +4,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using com.tinylabproductions.TLPLib.Extensions;
 using Mono.Cecil;
+using Mono.Collections.Generic;
 using NUnit.Framework;
 using TypesAnalyser;
 using TypesAnalyserTest.Data;
@@ -78,13 +79,28 @@ namespace TypesAnalyserTest {
 
     const string
       TEP = "TestEntryPoints",
+      TEP_GEN = "TestEntryPoints/<>c",
+      // http://stackoverflow.com/questions/16401860/what-does-displayclass-name-mean-when-calling-lambda
+      DISPLAY_CLASS = "c__DisplayClass",
       VOID = "System.Void",
       INT = "System.Int32",
+      INT_PTR = "System.IntPtr",
       BOOL = "System.Boolean",
+      DELEGATE = "System.Delegate",
       FLT = "System.Single",
+      DBL = "System.Double",
       STR = "System.String",
       OBJ = "System.Object",
+      EX = "System.Exception",
+      MNS_EX = "System.MulticastNotSupportedException",
+      SYS_EX = "System.SystemException",
+      ARG_EX = "System.ArgumentException",
+      TYPED_REF = "System.TypedReference",
+      FUNC1 = "System.Func`1",
+      FUNC2 = "System.Func`2",
+      FUNC3 = "System.Func`3",
       OBJ_CTOR = "System.Void System.Object::.ctor()",
+      STORE = "TestData.Store",
       INT_WRAPPER = "TestData.IntWrapper",
       INT_WRAPPER2 = "TestData.IntWrapper2",
       RECURSIVE = "TestData.Recursive`1",
@@ -121,6 +137,86 @@ namespace TypesAnalyserTest {
       IGEN_UNKNOWNIMPL = "TestData.IGenericUnknownImplementer`1",
       IGEN_UNKNOWNIMPL_EX = "TestData.IGenericExtender`1"
     ;
+
+    #endregion
+
+    #region Loads & Stores
+    
+    [Test]
+    public void testAddition() {
+      assertAnalyze("testAddition", 
+        new [] {INT, DBL},
+        ReadOnlyCollection<string>.Empty
+      );
+    }
+    
+    [Test]
+    public void testStoreStatic() {
+      assertAnalyze("testStoreStatic", 
+        new [] {INT, DBL, STORE},
+        ReadOnlyCollection<string>.Empty
+      );
+    }
+    
+    [Test]
+    public void testFetchStatic() {
+      assertAnalyze("testFetchStatic", 
+        new [] {INT, DBL, STORE},
+        ReadOnlyCollection<string>.Empty
+      );
+    }
+    
+    [Test]
+    public void testStoreInstance() {
+      assertAnalyze("testStoreInstance", 
+        new [] {INT, DBL, STORE, OBJ},
+        new [] {OBJ_CTOR, $"{VOID} {STORE}::.ctor()"}
+      );
+    }
+    
+    [Test]
+    public void testFetchInstance() {
+      assertAnalyze("testFetchInstance", 
+        new [] {INT, DBL, STORE, OBJ},
+        new [] {OBJ_CTOR, $"{VOID} {STORE}::.ctor()"}
+      );
+    }
+
+    #endregion
+
+    #region ref/out
+
+    [Test]
+    public void testRefMethod() {
+      assertAnalyze("testRefMethod", 
+        new [] {INT},
+        new [] {$"{VOID} {STORE}::refMethod({INT})"}
+      );
+    }
+
+    [Test]
+    public void testGenRefMethod() {
+      assertAnalyze("testGenRefMethod", 
+        new [] {INT},
+        new [] {$"{VOID} {STORE}::genRefMethod<{INT}>({INT}, {INT})"}
+      );
+    }
+    
+    [Test]
+    public void testOutMethod() {
+      assertAnalyze("testOutMethod", 
+        new [] {INT},
+        new [] {$"{VOID} {STORE}::outMethod({INT})"}
+      );
+    }
+    
+    [Test]
+    public void testGenOutMethod() {
+      assertAnalyze("testGenOutMethod", 
+        new [] {INT},
+        new [] {$"{VOID} {STORE}::genOutMethod<{INT}>({INT}, {INT})"}
+      );
+    }
 
     #endregion
 
@@ -208,14 +304,98 @@ namespace TypesAnalyserTest {
     #endregion
 
     #region Generic
+
+    #region Delegates
     
     [Test]
     public void testDelegates() {
-      assertAnalyze("testDelegates", 
-        new [] {INT, FLT},
+      const string name = "testDelegates", idx = "0_0";
+      assertAnalyze(name, 
+        new [] {INT, FLT, TEP_GEN, $"{FUNC3}<{INT}, {FLT}, {FLT}>"},
         new [] {
-          $"{INT} {TUPLE1_S}::identity<{INT}>({INT})",
-          $"{STR} {TUPLE1_S}::identity<{STR}>({STR})"
+          $"{FLT} {FUNC3}<{INT}, {FLT}, {FLT}>::Invoke({INT}, {FLT})",
+          $"{FLT} {TEP_GEN}::<{name}>b__{idx}({INT}, {FLT})"
+        }
+      );
+    }
+    
+    [Test]
+    public void testDynamicDelegates() {
+      const string name = "testDynamicDelegates", idx = "1_0";
+      assertAnalyze(name, 
+        new [] {
+          INT, FLT, OBJ, TEP_GEN,
+          $"{FUNC2}<{INT}, {FUNC2}<{FLT}, {FLT}>>",
+          $"{FUNC2}<{FLT}, {FLT}>",
+          $"{TEP}/<>{DISPLAY_CLASS}{idx}",
+        },
+        new [] {
+          OBJ_CTOR,
+          $"{VOID} {TEP}/<>{DISPLAY_CLASS}{idx}::.ctor()",
+          $"{FUNC2}<{FLT}, {FLT}> {TEP_GEN}::<{name}>b__{idx}({INT})",
+          $"{FUNC2}<{FLT}, {FLT}> {FUNC2}<{INT}, {FUNC2}<{FLT}, {FLT}>>::Invoke({INT})",
+          $"{FLT} {FUNC2}<{FLT}, {FLT}>::Invoke({FLT})",
+          $"{FLT} {TEP}/<>{DISPLAY_CLASS}{idx}::<{name}>b__1({FLT})",
+        }
+      );
+    }
+    
+    [Test]
+    public void testClosureDelegates() {
+      const string name = "testClosureDelegates", idx = "2_0";
+      assertAnalyze(name, 
+        new [] {
+          INT, FLT, OBJ,
+          $"{FUNC1}<{FUNC2}<{FLT}, {FLT}>>",
+          $"{FUNC2}<{FLT}, {FLT}>",
+          $"{TEP}/<>{DISPLAY_CLASS}{idx}",
+        },
+        new [] {
+          OBJ_CTOR,
+          $"{VOID} {TEP}/<>{DISPLAY_CLASS}{idx}::.ctor()",
+          $"{FUNC2}<{FLT}, {FLT}> {TEP}/<>{DISPLAY_CLASS}{idx}::<{name}>b__0()",
+          $"{FUNC2}<{FLT}, {FLT}> {FUNC1}<{FUNC2}<{FLT}, {FLT}>>::Invoke()",
+          $"{FLT} {FUNC2}<{FLT}, {FLT}>::Invoke({FLT})",
+          $"{FLT} {TEP}/<>{DISPLAY_CLASS}{idx}::<{name}>b__1({FLT})",
+        }
+      );
+    }
+
+    #endregion
+    
+    [Test]
+    public void testEvents() {
+      const string name = "testEvents", idx = "6_0";
+      assertAnalyze(name, 
+        new [] {
+          INT, FLT, OBJ, ARG_EX, BOOL, DELEGATE, EX, 
+          $"{FUNC2}<{INT}, {FLT}>", INT_PTR, MNS_EX, SYS_EX, STR, TYPED_REF, TEP_GEN
+        },
+        new [] {
+  OBJ_CTOR,
+  $"{BOOL} {DELEGATE}::InternalEqualTypes({OBJ}, {OBJ})",
+  $"{BOOL} {OBJ}::Equals({OBJ})",
+  $"{BOOL} {OBJ}::InternalEquals({OBJ}, {OBJ})",
+  $"{DELEGATE} {DELEGATE}::Combine({DELEGATE}, {DELEGATE})",
+  $"{DELEGATE} {DELEGATE}::CombineImpl({DELEGATE})",
+  $"{DELEGATE} {DELEGATE}::Remove({DELEGATE}, {DELEGATE})",
+  $"{DELEGATE} {DELEGATE}::RemoveImpl({DELEGATE})",
+  $"{FUNC2}<{INT}, {FLT}> System.Threading.Interlocked::CompareExchange<{FUNC2}<{INT}, {FLT}>>({FUNC2}<{INT}, {FLT}>, {FUNC2}<{INT}, {FLT}>, {FUNC2}<{INT}, {FLT}>)",
+  $"{INT_PTR} {INT_PTR}::op_Explicit({INT})",
+  $"{FLT} {FUNC2}<{INT}, {FLT}>::Invoke({INT})",
+  $"{FLT} {TEP_GEN}::<{name}>b__{idx}({INT})",
+  $"{STR} System.Environment::GetResourceFromDefault({STR})",
+  $"{STR} System.Environment::GetResourceString({STR})",
+  $"{VOID} {ARG_EX}::.ctor({STR})",
+  $"{VOID} {EX}::.ctor({STR})",
+  $"{VOID} {EX}::set_HResult({INT})",
+  $"{VOID} {EX}::SetErrorCode({INT})",
+  $"{VOID} {INT_PTR}::.ctor({INT})",
+  $"{VOID} {MNS_EX}::.ctor({STR})",
+  $"{VOID} {SYS_EX}::.ctor({STR})",
+  $"{VOID} System.Threading.Interlocked::_CompareExchange({TYPED_REF}, {TYPED_REF}, {OBJ})",
+  $"{VOID} {TEP}::add_onFoo({FUNC2}<{INT}, {FLT}>)",
+  $"{VOID} {TEP}::remove_onFoo({FUNC2}<{INT}, {FLT}>)",
         }
       );
     }
@@ -439,7 +619,8 @@ namespace TypesAnalyserTest {
     public void testNonGenericInterfaceCircularCalling() {
       assertAnalyze("testNonGenericInterfaceCircularCalling", 
         new [] {
-          INT, OBJ, INONGENERIC, INONGENERIC2, CIRCULAR_IDENTITY, CIRCULAR_IDENTITY2
+          INT, OBJ, BOOL,
+          INONGENERIC, INONGENERIC2, CIRCULAR_IDENTITY, CIRCULAR_IDENTITY2
         },
         new [] {
           OBJ_CTOR,
@@ -517,7 +698,8 @@ namespace TypesAnalyserTest {
     public void testNonGenericAbstractClassCircularCalling() {
       assertAnalyze("testNonGenericAbstractClassCircularCalling", 
         new [] {
-          INT, OBJ, AC_NONGENERIC, AC_NONGENERIC2, AC_CIRCULAR_IDENTITY, AC_CIRCULAR_IDENTITY2
+          INT, OBJ, BOOL,
+          AC_NONGENERIC, AC_NONGENERIC2, AC_CIRCULAR_IDENTITY, AC_CIRCULAR_IDENTITY2
         },
         new [] {
           OBJ_CTOR,
@@ -539,7 +721,8 @@ namespace TypesAnalyserTest {
     public void testNonGenericAbstractClassCircularCallingInterface() {
       assertAnalyze("testNonGenericAbstractClassCircularCallingInterface", 
         new [] {
-          INT, OBJ, INONGENERIC, AC_NONGENERIC, CIRCULAR_AC_IDENTITY, AC_CIRCULAR_IF_IDENTITY
+          INT, OBJ, BOOL,
+          INONGENERIC, AC_NONGENERIC, CIRCULAR_AC_IDENTITY, AC_CIRCULAR_IF_IDENTITY
         },
         new [] {
           OBJ_CTOR,

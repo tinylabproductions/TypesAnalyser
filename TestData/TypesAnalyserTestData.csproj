@@ -47,6 +47,7 @@
     <Compile Include="TestData\InterfaceCalling.cs" />
     <Compile Include="TestData\IntWrapper.cs" />
     <Compile Include="TestData\IRecursive.cs" />
+    <Compile Include="TestData\Store.cs" />
     <Compile Include="TestEntryPoints.cs" />
     <Compile Include="UnityEntry.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

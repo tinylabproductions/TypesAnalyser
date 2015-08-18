@@ -90,8 +90,8 @@ namespace TypesAnalyser {
 
       // Generic method, like A identity<A>(A a);
       var gRef = reference as GenericInstanceMethod;
-      var tpl = gRef == null
-        ? F.t(callerAndDeclaringGenericParameters, ImmutableList<ExpandedType>.Empty)
+      var gRefTpl = gRef == null
+        ? F.t(ImmutableDictionary<GenericParameter, ExpandedType>.Empty, ImmutableList<ExpandedType>.Empty)
         : gRef.locally(() => {
           var methodGenericArgs = genericArgumentsDict(
             gRef.GenericArguments, definition.GenericParameters,
@@ -101,16 +101,25 @@ namespace TypesAnalyser {
             gRef.GenericArguments, gRef.ElementMethod.GenericParameters,
             callerAndDeclaringGenericParameters
           );
-          var _dict = callerAndDeclaringGenericParameters
-            .SetItems(methodGenericArgs).SetItems(elementMethodGenericArgs);
+          var _dict = methodGenericArgs.SetItems(elementMethodGenericArgs);
           var _exParameters = definition.GenericParameters.Select(p =>
             ExpandedType.create(p, _dict)
           ).ToImmutableList();
           return F.t(_dict, _exParameters);
         });
 
-      var dict = tpl._1;
-      var exGenericArguments = tpl._2;
+      // Delegates have their arguments messed up somehow. The parameters take 
+      // form of !!0, instead of A.
+      var declGRef = reference.DeclaringType as GenericInstanceType;
+      var declGRefGenericArgs = declGRef == null
+        ? ImmutableDictionary<GenericParameter, ExpandedType>.Empty
+        : genericArgumentsDict(
+            declGRef.GenericArguments, declGRef.ElementType.GenericParameters,
+            callerAndDeclaringGenericParameters
+          );
+
+      var dict = callerAndDeclaringGenericParameters.SetItems(gRefTpl._1).SetItems(declGRefGenericArgs);
+      var exGenericArguments = gRefTpl._2;
       var exParameters = reference.Parameters.Select(p => {
         var gp = p.ParameterType as GenericParameter;
         return gp == null

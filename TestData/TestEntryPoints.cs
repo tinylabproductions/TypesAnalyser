@@ -4,6 +4,86 @@ using TestData;
 // ReSharper disable UnusedVariable
 
 static class TestEntryPoints {
+  // Order of these methods in code is important, because the compiler generates 
+  // names for delegate fields based on it.
+  // Brittle, eh?
+
+  #region Delegate entry points
+
+  public static void testDelegates() {
+    Func<int, float, float> f = (a, b) => a + b;
+    var result = f(1, 2.4f);
+  }
+
+  public static void testDynamicDelegates() {
+    Func<int, Func<float, float>> createF = a => b => a + b;
+    var add1 = createF(1);
+    var result = add1(2.4f);
+  }
+
+  public static void testClosureDelegates() {
+    var a = 1;
+    Func<Func<float, float>> createF = () => b => a + b;
+    var add1 = createF();
+    var add2 = createF();
+    a = 2;
+    var result = add1(2.4f);
+  }
+  
+  static event Func<int, float> onFoo;
+  public static void testEvents() {
+    Func<int, float> handler = i => i;
+    onFoo += handler;
+    var x = onFoo(3);
+    onFoo -= handler;
+  }
+
+  #endregion
+
+  public static void testAddition() {
+    var a = 3;
+    var b = 4.5;
+    var c = a + b;
+  }
+
+  public static void testStoreStatic() {
+    Store.staticInt = 3;
+    Store.staticDouble = 4;
+  }
+
+  public static void testFetchStatic() {
+    var a = Store.staticInt;
+    var b = Store.staticDouble;
+  }
+
+  public static void testStoreInstance() { var s = new Store {instanceInt = 3, instanceDouble = 4}; }
+
+  public static void testFetchInstance() {
+    var s = new Store();
+    var a = s.instanceInt;
+    var b = s.instanceDouble;
+  }
+
+  public static void testRefMethod() {
+    var a = 3;
+    Store.refMethod(ref a);
+  }
+
+  public static void testGenRefMethod() {
+    var a = 3;
+    Store.genRefMethod(ref a, 5);
+  }
+
+  public static void testOutMethod() {
+    int a;
+    Store.outMethod(out a);
+  }
+
+  public static void testGenOutMethod() {
+    int a;
+    Store.genOutMethod(out a, 5);
+  }
+
   public static void testStaticNonGeneric() {
     var intV = IntWrapper.identity(3);
   }
@@ -40,11 +120,6 @@ static class TestEntryPoints {
   public static void testStaticMethodInGenericClass() {
     var intId = Tuple1<int>.identity(3);
     var strId = Tuple1<string>.identity("3");
-  }
-
-  public static void testDelegates() {
-    Func<int, float, float> f = (a, b) => a + b;
-    var result = f(1, 2.4f);
   }
 
   public static void testGenericStructCtor() {

@@ -196,12 +196,28 @@ namespace TypesAnalyser {
       }
       else if (method.definition.Body != null) {
         var body = method.definition.Body;
+        foreach (var varDef in body.Variables) {
+          var exVar = ExpandedType.create(varDef.VariableType, method.genericParameterToExType);
+          data = data.addType(exVar);
+        }
         foreach (var instruction in body.Instructions) {
           if (
+            instruction.OpCode == OpCodes.Stfld || instruction.OpCode == OpCodes.Stsfld
+            || instruction.OpCode == OpCodes.Ldsfld
+          ) {
+            var fieldDef = (FieldReference) instruction.Operand;
+            var exFieldDef = ExpandedType.create(fieldDef.FieldType, method.genericParameterToExType);
+            var exDeclaringType = ExpandedType.create(fieldDef.DeclaringType, method.genericParameterToExType);
+            data = data.addType(exFieldDef).addType(exDeclaringType);
+          }
+          else if (
             instruction.OpCode == OpCodes.Call || instruction.OpCode == OpCodes.Calli
             || instruction.OpCode == OpCodes.Callvirt || instruction.OpCode == OpCodes.Newobj
           ) {
             var methodRef = (MethodReference)instruction.Operand;
+            if (instruction.OpCode == OpCodes.Newobj && methodRef.DeclaringType.Resolve().isDelegate()) {
+              methodRef = (MethodReference) instruction.Previous.Operand;
+            }
             var expanded = ExpandedMethod.create(methodRef, method.genericParameterToExType);
             data = analyze(data, expanded, log);
           }

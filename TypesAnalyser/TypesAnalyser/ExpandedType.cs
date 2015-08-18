@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using com.tinylabproductions.TLPLib.Extensions;
@@ -43,6 +44,8 @@ namespace TypesAnalyser {
       ImmutableList<ExpandedType> genericArguments,
       ImmutableDictionary<GenericParameter, ExpandedType> genericParametersToArguments
     ) : this() {
+      Debug.Assert(definition != null, "definition != null");
+
       this.definition = definition;
       this.genericArguments = genericArguments;
       this.genericParametersToArguments = genericParametersToArguments;
@@ -77,8 +80,9 @@ namespace TypesAnalyser {
     public override string ToString() { return _name.get; }
 
     public static ExpandedType create(
-      TypeReference reference, IImmutableDictionary<GenericParameter, ExpandedType> generics
+      TypeReference _reference, IImmutableDictionary<GenericParameter, ExpandedType> generics
     ) {
+      var reference = _reference.IsByReference ? ((ByReferenceType) _reference).ElementType : _reference;
       var definition = reference.Resolve();
       if (reference.IsGenericInstance) {
         var gRef = (GenericInstanceType) reference;
