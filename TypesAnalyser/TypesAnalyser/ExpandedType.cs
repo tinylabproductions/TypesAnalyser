@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
@@ -87,6 +88,12 @@ namespace TypesAnalyser {
     #endregion
 
     public override string ToString() { return _name; }
+
+    public IEnumerable<ExpandedMethod> methods { get {
+      foreach (var method in definition.Methods) {
+        yield return ExpandedMethod.create(this, method, genericParametersToArguments);
+      }  
+    } }
 
     public static ExpandedType create(
       TypeReference _reference, IImmutableDictionary<GenericParameter, ExpandedType> generics

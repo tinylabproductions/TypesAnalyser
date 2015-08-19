@@ -114,6 +114,11 @@ namespace TypesAnalyserTest {
       PRIV_INNER_STRUCT_S = "TestData.PrivateInnerStruct`1/Inner",
       PUBLIC_INNER_RECURSIVE = "TestData.PublicInnerRecursive`1",
       PUBLIC_INNER_RECURSIVE_NODE = "TestData.PublicInnerRecursive`1/Node",
+      INNER_GENERIC_DELEGATE = "TestData.InnerGenericDelegate`1",
+      INNER_GENERIC_DELEGATE_INNER = "TestData.InnerGenericDelegate`1/LessOrEqual",
+      USING_INNER_GENERIC_DELEGATE = "TestData.UsingInnerGenericDelegate`1",
+      STATIC_WITH_INNER_GENERIC = "TestData.StaticWithInnerGeneric",
+      STATIC_WITH_INNER_GENERIC_VAL = "TestData.StaticWithInnerGeneric/Val`1",
       TUPLE1_S = "TestData.Tuple1",
       TUPLE1 = "TestData.Tuple1`1",
       TUPLE1_C = "TestData.Tuple1C`1",
@@ -121,6 +126,11 @@ namespace TypesAnalyserTest {
       TUPLE2 = "TestData.Tuple2`2",
       INONGENERIC = "TestData.INonGeneric",
       INONGENERIC2 = "TestData.INonGeneric2",
+      IEXPLICITINTERFACE = "TestData.IExplicitInterface",
+      IEXPLICITINTERFACE_IMPL = "TestData.ExplicitInterfaceImpl",
+      IEXPLICITGENINTERFACE = "TestData.IExplicitGenInterface`1",
+      IEXPLICITGENINTERFACE_S = "TestData.IExplicitGenInterface",
+      IEXPLICITGENINTERFACE_IMPL = "TestData.ExplicitInterfaceGenImpl`1",
       IUNKNOWNIMPL = "TestData.INonGenericUnknownImplementer",
       IUNKNOWNIMPL_EX = "TestData.INonGenericExtender",
       CIRCULAR_IDENTITY = "TestData.CircularIdentity",
@@ -645,6 +655,105 @@ namespace TypesAnalyserTest {
       );
     }
 
+    [Test]
+    public void testStoringInnerGenericInStaticField() {
+      assertAnalyze("testStoringInnerGenericInStaticField",
+        new[] {
+          OBJ,
+          $"{STATIC_WITH_INNER_GENERIC}",
+          $"{STATIC_WITH_INNER_GENERIC_VAL}<{INT}>",
+        },
+        new[] {
+          OBJ_CTOR,
+          $"{VOID} {STATIC_WITH_INNER_GENERIC_VAL}<{INT}>::.ctor()",
+        }
+      );
+    }
+
+    [Test]
+    public void testDelegateInMethod() {
+      // TODO: fixme
+      assertAnalyze("testDelegateInMethod",
+        new[] {
+          OBJ,
+//          $"{STATIC_WITH_INNER_GENERIC}",
+//          $"{STATIC_WITH_INNER_GENERIC_VAL}<{INT}>",
+        },
+        new[] {
+          OBJ_CTOR,
+//          $"{VOID} {STATIC_WITH_INNER_GENERIC_VAL}<{INT}>::.ctor()",
+        }
+      );
+    }
+
+    [Test]
+    public void testInnerGenericDelegateWithStruct() {
+      const string name = "testInnerGenericDelegateWithStruct", idx = "7_0";
+      assertAnalyze(name,
+        new[] {
+          INT, OBJ, BOOL, TEP_GEN,
+          $"{INNER_GENERIC_DELEGATE}<{INT}>",
+          $"{INNER_GENERIC_DELEGATE_INNER}<{INT}>",
+        },
+        new[] {
+          OBJ_CTOR,
+          $"{VOID} {INNER_GENERIC_DELEGATE}<{INT}>::.ctor({INNER_GENERIC_DELEGATE_INNER}<{INT}>)",
+          $"{BOOL} {TEP_GEN}::<{name}>b__{idx}({INT}, {INT})",
+        }
+      );
+    }
+
+    [Test]
+    public void testInnerGenericDelegateWithClass() {
+      const string name = "testInnerGenericDelegateWithClass", idx = "8_0";
+      assertAnalyze(name,
+        new[] {
+          STR, OBJ, BOOL, TEP_GEN,
+          $"{INNER_GENERIC_DELEGATE}<{STR}>",
+          $"{INNER_GENERIC_DELEGATE_INNER}<{STR}>",
+        },
+        new[] {
+          OBJ_CTOR,
+          $"{VOID} {INNER_GENERIC_DELEGATE}<{STR}>::.ctor({INNER_GENERIC_DELEGATE_INNER}<{STR}>)",
+          $"{BOOL} {TEP_GEN}::<{name}>b__{idx}({STR}, {STR})",
+        }
+      );
+    }
+
+    [Test]
+    public void testUsingInnerGenericDelegateWithStruct() {
+      const string name = "testUsingInnerGenericDelegateWithStruct", idx = "9_0";
+      assertAnalyze(name,
+        new[] {
+          INT, OBJ, BOOL, TEP_GEN,
+          $"{USING_INNER_GENERIC_DELEGATE}<{INT}>",
+          $"{INNER_GENERIC_DELEGATE_INNER}<{INT}>",
+        },
+        new[] {
+          OBJ_CTOR,
+          $"{VOID} {USING_INNER_GENERIC_DELEGATE}<{INT}>::.ctor({INNER_GENERIC_DELEGATE_INNER}<{INT}>)",
+          $"{BOOL} {TEP_GEN}::<{name}>b__{idx}({INT}, {INT})",
+        }
+      );
+    }
+
+    [Test]
+    public void testUsingInnerGenericDelegateWithClass() {
+      const string name = "testUsingInnerGenericDelegateWithClass", idx = "10_0";
+      assertAnalyze(name,
+        new[] {
+          STR, OBJ, BOOL, TEP_GEN,
+          $"{USING_INNER_GENERIC_DELEGATE}<{STR}>",
+          $"{INNER_GENERIC_DELEGATE_INNER}<{STR}>",
+        },
+        new[] {
+          OBJ_CTOR,
+          $"{VOID} {USING_INNER_GENERIC_DELEGATE}<{STR}>::.ctor({INNER_GENERIC_DELEGATE_INNER}<{STR}>)",
+          $"{BOOL} {TEP_GEN}::<{name}>b__{idx}({STR}, {STR})",
+        }
+      );
+    }
+
     #endregion
 
     #region Virtual dispatch
@@ -719,6 +828,21 @@ namespace TypesAnalyserTest {
           $"{INT} {IUNKNOWNIMPL}::identity({INT})",
           $"{VOID} {IUNKNOWNIMPL}::.ctor()",
           $"{VOID} {IUNKNOWNIMPL_EX}::.ctor()",
+        }
+      );
+    }
+
+    [Test]
+    public void testExplicitNonGenericInterface() {
+      assertAnalyze("testExplicitNonGenericInterface", 
+        new [] {
+          INT, OBJ, IEXPLICITINTERFACE, IEXPLICITINTERFACE_IMPL
+        },
+        new [] {
+          OBJ_CTOR,
+          $"{INT} {IEXPLICITINTERFACE}::getInt()",
+          $"{INT} {IEXPLICITINTERFACE_IMPL}::{IEXPLICITINTERFACE}.getInt()",
+          $"{VOID} {IEXPLICITINTERFACE_IMPL}::.ctor()",
         }
       );
     }
@@ -881,6 +1005,38 @@ namespace TypesAnalyserTest {
           $"{INT} {IGEN_UNKNOWNIMPL}<{INT}>::identity({INT})",
           $"{VOID} {IGEN_UNKNOWNIMPL}<{INT}>::.ctor()",
           $"{VOID} {IGEN_UNKNOWNIMPL_EX}<{INT}>::.ctor()",
+        }
+      );
+    }
+
+    [Test]
+    public void testExplicitGenericInterface() {
+      assertAnalyze("testExplicitGenericInterface", 
+        new [] {
+          INT, OBJ, $"{IEXPLICITGENINTERFACE}<{INT}>", $"{IEXPLICITGENINTERFACE_IMPL}<{INT}>"
+        },
+        new [] {
+          OBJ_CTOR,
+          $"{INT} {IEXPLICITGENINTERFACE}<{INT}>::identity({INT})",
+          $"{INT} {IEXPLICITGENINTERFACE_IMPL}<{INT}>::{IEXPLICITGENINTERFACE_S}<A>.identity({INT})",
+          $"{VOID} {IEXPLICITGENINTERFACE_IMPL}<{INT}>::.ctor()",
+        }
+      );
+    }
+
+    [Test]
+    public void testGenericInterfaceWithGenericMethod() {
+      assertAnalyze("testGenericInterfaceWithGenericMethod", 
+        new [] {
+          INT, OBJ, FLT,
+          $"{IGENERIC}<{INT}>", $"{GENERIC_IDENTITY}<{INT}>", $"{TUPLE2}<{INT}, {FLT}>"
+        },
+        new [] {
+          OBJ_CTOR,
+          $"{VOID} {TUPLE2}<{INT}, {FLT}>::.ctor({INT}, {FLT})",
+          $"{TUPLE2}<{INT}, {FLT}> {IGENERIC}<{INT}>::zip<{FLT}>({INT}, {FLT})",
+          $"{TUPLE2}<{INT}, {FLT}> {GENERIC_IDENTITY}<{INT}>::zip<{FLT}>({INT}, {FLT})",
+          $"{VOID} {GENERIC_IDENTITY}<{INT}>::.ctor()",
         }
       );
     }

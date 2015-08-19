@@ -2,10 +2,13 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using com.tinylabproductions.TLPLib.Functional;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using Mono.Collections.Generic;
+using TypesAnalyser.Cecil;
 
 namespace TypesAnalyser {
   public struct AnalyzerData {
@@ -97,12 +100,14 @@ namespace TypesAnalyser {
       // virtual methods.
       while (!data.virtualMethodsToAnalyze.IsEmpty) {
         foreach (var virtualMethod in data.virtualMethodsToAnalyze) {
-          var declaring = virtualMethod.declaringType;
+          var declaring = virtualMethod.method.declaringType;
           foreach (var _usedType in data.usedTypes.Where(et => et.implements(declaring))) {
             var usedType = _usedType;
             MethodDefinition matching = null;
             while (matching == null) {
-              matching = MetadataResolver.GetMethod(usedType.definition.Methods, virtualMethod.definition);
+              matching = VirtualMethods.GetMethod(
+                usedType.definition.Methods, virtualMethod.method.definition
+              );
               if (matching == null) {
                 if (usedType.definition.BaseType == null) throw new Exception(
                   "Can't find implementation for [" + virtualMethod + "] in [" + _usedType + "]!"
@@ -113,10 +118,18 @@ namespace TypesAnalyser {
                 );
               }
             }
-            
-            var exMatching = ExpandedMethod.create(
-              usedType, matching,
-              ImmutableDictionary<GenericParameter, ExpandedType>.Empty
+
+            var generics = usedType.genericParametersToArguments.AddRange(
+              ExpandedMethod.genericArgumentsDict(
+                virtualMethod.method.genericArguments.Select(t => (TypeReference)t.definition).ToList(),
+                matching.GenericParameters,
+                usedType.genericParametersToArguments
+              )
+            );
+            var exMatching = new ExpandedMethod(
+              virtualMethod.method.returnType, usedType, matching, 
+              virtualMethod.method.genericArguments,
+              virtualMethod.method.parameters, generics
             );
             data = analyze(data, exMatching, log);
           }
@@ -172,7 +185,9 @@ namespace TypesAnalyser {
           ) {
             var fieldDef = (FieldReference) instruction.Operand;
             var fieldGenerics = method.genericParameterToExType;
-            if (fieldDef.FieldType.IsNested) {
+            var gFieldType = fieldDef.FieldType as GenericInstanceType;
+
+            if (fieldDef.FieldType.DeclaringType != null /*fieldDef.FieldType.IsNested*/) {
               if (fieldDef.FieldType.IsGenericParameter) {
                 var generics = ExpandedMethod.genericArgumentsDict(
                   ((GenericInstanceType) fieldDef.DeclaringType).GenericArguments,
@@ -181,17 +196,25 @@ namespace TypesAnalyser {
                 );
                 fieldGenerics = fieldGenerics.AddRange(generics);
               }
-              var gFieldType = fieldDef.FieldType as GenericInstanceType;
               if (gFieldType != null) {
-                var generics = ExpandedMethod.genericArgumentsDict(
-                  gFieldType.IsValueType 
-                    ? (IList<TypeReference>) gFieldType.GenericArguments
-                    : gFieldType.DeclaringType.GenericParameters.Cast<TypeReference>().ToList(),
-                  gFieldType.IsValueType 
-                    ? (IList<GenericParameter>) gFieldType.ElementType.GenericParameters
-                    : gFieldType.GenericArguments.Cast<GenericParameter>().ToList(),
-                  fieldGenerics
-                );
+                var tpl = 
+                  gFieldType.GenericArguments.SequenceEqual(gFieldType.ElementType.GenericParameters)
+                  ? F.t(
+                    (IList<TypeReference>)gFieldType.ElementType.DeclaringType.GenericParameters.Cast<TypeReference>().ToList(),
+                    (IList<GenericParameter>)gFieldType.GenericArguments.Cast<GenericParameter>().ToList()
+                  )
+                  : gFieldType.ElementType.DeclaringType.HasGenericParameters
+                    ? F.t(
+                      (IList<TypeReference>) gFieldType.GenericArguments,
+                      (IList<GenericParameter>) gFieldType.ElementType.DeclaringType.GenericParameters
+                    )
+                    : F.t(
+                      (IList<TypeReference>)new TypeReference[0], 
+                      (IList<GenericParameter>)new GenericParameter[0]
+                    );
+
+                var generics =
+                  ExpandedMethod.genericArgumentsDict(tpl._1, tpl._2, fieldGenerics);
                 fieldGenerics = fieldGenerics.AddRange(generics);
               }
             }

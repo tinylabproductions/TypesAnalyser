@@ -1,15 +1,20 @@
 ﻿// ReSharper disable UnusedParameter.Local
 
 namespace TestData {
-  interface IGenericInterfaceCalling<A> { A identity(A a); }
+  interface IGenericInterfaceCalling<A> {
+    A identity(A a);
+    Tuple2<A, B> zip<B>(A a, B b);
+  }
   interface IGenericInterfaceCalling2<A> { A identity(A a); }
 
   class GenericSimpleIdentity<A> : IGenericInterfaceCalling<A> {
     public A identity(A a) { return a; }
+    public Tuple2<A, B> zip<B>(A a, B b) { return new Tuple2<A, B>(a, b); }
   }
 
   class GenericExtraArgIdentity<A, B> : IGenericInterfaceCalling<A> {
     public A identity(A a) { return fromB(fromA(a)); }
+    public Tuple2<A, B1> zip<B1>(A a, B1 b) { return new Tuple2<A, B1>(a, b); }
 
     static B fromA(A a) { return default(B); }
     static A fromB(B b) { return default(A); }
@@ -23,6 +28,8 @@ namespace TestData {
       }
       else return a;
     }
+
+    public Tuple2<A, B> zip<B>(A a, B b) { return new Tuple2<A, B>(a, b); }
   }
 
   class GenericCircularIdentity2<A> : IGenericInterfaceCalling2<A> {
@@ -40,5 +47,7 @@ namespace TestData {
     public A identity(A value) { return value; }
   }
 
-  class IGenericExtender<A> : IGenericUnknownImplementer<A>, IGenericInterfaceCalling<A> {}
+  class IGenericExtender<A> : IGenericUnknownImplementer<A>, IGenericInterfaceCalling<A> {
+    public Tuple2<A, B> zip<B>(A a, B b) { return new Tuple2<A, B>(a, b); }
+  }
 }

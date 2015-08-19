@@ -1,22 +1,15 @@
 ﻿using System;
-using Mono.Cecil;
 
 namespace TypesAnalyser {
   public struct VirtualMethod : IEquatable<VirtualMethod> {
-    public readonly ExpandedType declaringType;
-    public readonly MethodDefinition definition;
+    public readonly ExpandedMethod method;
 
-    public VirtualMethod(ExpandedType declaringType, MethodDefinition definition) {
-      this.declaringType = declaringType;
-      this.definition = definition;
-    }
-
-    public VirtualMethod(ExpandedMethod method) : this(method.declaringType, method.definition) {}
+    public VirtualMethod(ExpandedMethod method) { this.method = method; }
 
     #region Equality
 
     public bool Equals(VirtualMethod other) {
-      return Equals(definition, other.definition);
+      return method.Equals(other.method);
     }
 
     public override bool Equals(object obj) {
@@ -25,7 +18,7 @@ namespace TypesAnalyser {
     }
 
     public override int GetHashCode() {
-      return (definition != null ? definition.GetHashCode() : 0);
+      return method.GetHashCode();
     }
 
     public static bool operator ==(VirtualMethod left, VirtualMethod right) { return left.Equals(right); }
@@ -33,6 +26,6 @@ namespace TypesAnalyser {
 
     #endregion
 
-    public override string ToString() { return $"[{definition} in {declaringType}]"; }
+    public override string ToString() { return $"VirtualMethod[{method}]"; }
   }
 }

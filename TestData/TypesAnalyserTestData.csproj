@@ -43,12 +43,16 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="TestData\AbstractClass.cs" />
+    <Compile Include="TestData\DelegateInMethod.cs" />
     <Compile Include="TestData\GenericInterfaceCalling.cs" />
+    <Compile Include="TestData\IExplicitInterface.cs" />
     <Compile Include="TestData\InterfaceCalling.cs" />
     <Compile Include="TestData\IntWrapper.cs" />
     <Compile Include="TestData\IRecursive.cs" />
+    <Compile Include="TestData\InnerGenericDelegate.cs" />
     <Compile Include="TestData\PrivateInnerStruct.cs" />
     <Compile Include="TestData\PublicInnerRecursive.cs" />
+    <Compile Include="TestData\StaticWithInnerGeneric.cs" />
     <Compile Include="TestData\Store.cs" />
     <Compile Include="TestEntryPoints.cs" />
     <Compile Include="UnityEntry.cs" />

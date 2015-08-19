@@ -40,6 +40,22 @@ static class TestEntryPoints {
     onFoo -= handler;
   }
 
+  public static void testInnerGenericDelegateWithStruct() {
+    var x = new InnerGenericDelegate<int>((a, b) => a < b);
+  }
+
+  public static void testInnerGenericDelegateWithClass() {
+    var x = new InnerGenericDelegate<string>((a, b) => true);
+  }
+
+  public static void testUsingInnerGenericDelegateWithStruct() {
+    var x = new UsingInnerGenericDelegate<int>((a, b) => a < b);
+  }
+
+  public static void testUsingInnerGenericDelegateWithClass() {
+    var x = new UsingInnerGenericDelegate<string>((a, b) => true);
+  }
+
   #endregion
 
   public static void testAddition() {
@@ -238,6 +254,21 @@ static class TestEntryPoints {
     iface.identity(3);
   }
 
+  public static void testExplicitNonGenericInterface() {
+    IExplicitInterface iface = new ExplicitInterfaceImpl();
+    var a = iface.getInt();
+  }
+
+  public static void testExplicitGenericInterface() {
+    IExplicitGenInterface<int> iface = new ExplicitInterfaceGenImpl<int>();
+    var a = iface.identity(3);
+  }
+
+  public static void testGenericInterfaceWithGenericMethod() {
+    IGenericInterfaceCalling<int> iface = new GenericSimpleIdentity<int>();
+    var a = iface.zip(3, 4f);
+  }
+
   public static void testMethodUniqueness() { var a = string.Concat("3", "4"); }
 
   public static void testGenericArrayViaStatic() { var x = Tuple1.arrIdentity(new[] {1}); }
@@ -249,6 +280,14 @@ static class TestEntryPoints {
 
   public static void testPublicInnerRecursive() {
     var x = new PublicInnerRecursive<int>(3);
+  }
+
+  public static void testStoringInnerGenericInStaticField() {
+    StaticWithInnerGeneric.val = new StaticWithInnerGeneric.Val<int>();
+  }
+
+  public static void testDelegateInMethod() {
+    var x = DelegateInMethod<int>.get();
   }
 
   public static void testLinqSelect() {
