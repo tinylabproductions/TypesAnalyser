@@ -1,0 +1,7 @@
+This is work in progress.
+
+It was started as an effort to provide better code generation for Unity 
+IL2CPP - to allow generating only actually used types instead of generating
+a bunch of unneeded stuff.
+
+Author: Artūras Šlajus <arturas@tinylabproductions.com>
